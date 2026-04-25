@@ -464,8 +464,8 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 
   <div class="dk">
     <div class="dk-grid">
-      <div class="dk-box"><div class="dk-lbl">2 últimas cifras ONCE</div><div class="dk-val" id="dkRight">Premio 1</div></div>
       <div class="dk-box"><div class="dk-lbl">2 primeras cifras ONCE</div><div class="dk-val" id="dkLeft">Premio 2</div></div>
+      <div class="dk-box"><div class="dk-lbl">2 últimas cifras ONCE</div><div class="dk-val" id="dkRight">Premio 1</div></div>
     </div>
   </div>
 
@@ -1313,8 +1313,8 @@ function revealWinners() {
     const p2 = cfg.prizes?.[1]?.name || 'Premio 2';
 
     const wHTML = `
-      <p><strong>${p1} (cifras ${rightTwo}):</strong> ${w1.length ? w1.map(([n,v])=>`🎊 Número <strong>${n}</strong>${v.phone?' · '+v.phone:''}`).join(', ') : `Número/s con terminación ${rightTwo} — no confirmado/s aún`}</p>
-      <p style="margin-top:6px;"><strong>${p2} (cifras ${leftTwo}):</strong> ${w2.length ? w2.map(([n,v])=>`🎊 Número <strong>${n}</strong>${v.phone?' · '+v.phone:''}`).join(', ') : `Número/s con inicio ${leftTwo} — no confirmado/s aún`}</p>`;
+      <p><strong>${p2} (cifras ${leftTwo}):</strong> ${w2.length ? w2.map(([n,v])=>`🎊 Número <strong>${n}</strong>${v.phone?' · '+v.phone:''}`).join(', ') : `Número/s con inicio ${leftTwo} — no confirmado/s aún`}</p>
+      <p style="margin-top:6px;"><strong>${p1} (cifras ${rightTwo}):</strong> ${w1.length ? w1.map(([n,v])=>`🎊 Número <strong>${n}</strong>${v.phone?' · '+v.phone:''}`).join(', ') : `Número/s con terminación ${rightTwo} — no confirmado/s aún`}</p>`;
     el('onceWins').innerHTML = wHTML;
     showWinnerOverlay(raw, rightTwo, leftTwo, p1, p2, w1, w2);
   });
@@ -1324,8 +1324,8 @@ function showWinnerOverlay(numStr, right, left, p1, p2, w1, w2) {
   el('wNum').textContent = numStr;
   el('wDig').textContent = `Premios: cifras ${right} (derecha) y ${left} (izquierda)`;
   el('wPrs').innerHTML   = `
-    <p class="wn-pr">🥇 <strong>${p1}:</strong> números terminados en <strong>${right}</strong></p>
-    <p class="wn-pr">🥈 <strong>${p2}:</strong> números que empiezan por <strong>${left}</strong></p>`;
+    <p class="wn-pr">🥇 <strong>${p2}:</strong> números que empiezan por <strong>${left}</strong></p>
+    <p class="wn-pr">🥈 <strong>${p1}:</strong> números terminados en <strong>${right}</strong></p>`;
   el('winOverlay').classList.add('show');
   el('confetti').classList.add('show');
   launchConfetti();
