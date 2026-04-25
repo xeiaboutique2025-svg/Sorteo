@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<!-- OG tags ESTÁTICOS para que Facebook y WhatsApp los lean correctamente -->
+<meta property="og:type"        content="website">
+<meta property="og:title"       content="🎟️ Sorteo Solidario · ¡Donativo de 1€ y puedes ganar!">
+<meta property="og:description" content="Elige tu número y haz un donativo solidario de 1€. Sorteo sin ánimo de lucro de Esparto Vivo.">
+<title>Sorteo Solidario</title>
+
+<!-- Firebase SDK (tiempo real) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<!-- EmailJS (notificaciones por email) -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
+<style>
+/* ============================
+   VARIABLES
+   ============================ */
+:root {
+  --green:      #3D7A4F;
+  --green-dark: #2A5437;
+  --green-light:#E8F5EE;
+  --gold:       #C9952A;
+  --gold-light: #FFF8E7;
+  --red:        #C0392B;
+  --orange:     #E67E22;
+  --bg:         #F8F4EE;
+  --white:      #FFFFFF;
+  --text:       #2C2416;
+  --muted:      #7A6E62;
+  --border:     #DDD5C8;
+  --radius:     12px;
+  --radius-sm:  8px;
+}
+*    { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+/* ============================
+   PANTALLA SETUP FIREBASE
+   ============================ */
+#fbSetup {
+  display: none; position: fixed; inset: 0;
+  background: #152b1c; z-index: 10000;
+  flex-direction: column; align-items: center; justify-content: flex-start;
+  padding: 20px; overflow-y: auto;
+}
+.fb-wrap  { max-width: 500px; width: 100%; padding-top: 20px; }
+.fb-logo  { font-size: 2.5rem; text-align: center; margin-bottom: 10px; }
+.fb-title { color: white; font-size: 1.3rem; font-weight: 800; text-align: center; margin-bottom: 4px; }
+.fb-sub   { color: rgba(255,255,255,0.6); font-size: 0.8rem; text-align: center; margin-bottom: 22px; line-height: 1.5; }
+.fb-steps { margin-bottom: 18px; }
+.fb-step  { background: rgba(255,255,255,0.07); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 8px; font-size: 0.78rem; color: rgba(255,255,255,0.8); line-height: 1.6; border-left: 3px solid var(--gold); }
+.fb-step strong { color: white; }
+.fb-step a      { color: var(--gold); }
+.fb-ta {
+  width: 100%; min-height: 120px; padding: 12px;
+  border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08); color: white; font-size: 0.78rem;
+  font-family: monospace; resize: vertical; outline: none; margin-bottom: 8px;
+}
+.fb-ta::placeholder { color: rgba(255,255,255,0.3); }
+.fb-ta:focus { border-color: var(--gold); }
+.fb-err { color: #ff7b7b; font-size: 0.75rem; margin-bottom: 8px; display: none; }
+
+/* ============================
+   WIZARD
+   ============================ */
+#wizard {
+  position: fixed; inset: 0; background: var(--green-dark);
+  z-index: 9999; display: flex; flex-direction: column; overflow-y: auto;
+}
+.wh { background: rgba(0,0,0,0.25); padding: 20px 18px 12px; text-align: center; color: white; }
+.wh h1 { font-size: 1.3rem; font-weight: 800; }
+.wh p  { font-size: 0.78rem; opacity: 0.7; margin-top: 3px; }
+.wp { background: rgba(0,0,0,0.15); padding: 10px 18px; display: flex; align-items: center; gap: 8px; }
+.wp-bar  { flex: 1; height: 5px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; }
+.wp-fill { height: 100%; background: var(--gold); border-radius: 3px; transition: width 0.4s ease; }
+.wp-lbl  { color: rgba(255,255,255,0.65); font-size: 0.7rem; white-space: nowrap; }
+.wb  { flex: 1; padding: 18px; max-width: 520px; margin: 0 auto; width: 100%; }
+.ws  { display: none; animation: fsIn 0.3s ease; }
+.ws.active { display: block; }
+@keyframes fsIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+.ws h2  { color: white; font-size: 1.1rem; margin-bottom: 4px; }
+.ws .wd { color: rgba(255,255,255,0.65); font-size: 0.78rem; margin-bottom: 18px; line-height: 1.5; }
+.fg { margin-bottom: 13px; }
+.fg label { display: block; color: rgba(255,255,255,0.9); font-size: 0.79rem; font-weight: 600; margin-bottom: 5px; }
+.fg input, .fg textarea, .fg select {
+  width: 100%; padding: 10px 12px; border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1);
+  color: white; font-size: 0.86rem; outline: none; transition: border 0.2s, background 0.2s;
+}
+.fg input::placeholder, .fg textarea::placeholder { color: rgba(255,255,255,0.35); }
+.fg input:focus, .fg textarea:focus { border-color: var(--gold); background: rgba(255,255,255,0.15); }
+.fg textarea { min-height: 70px; resize: vertical; }
+.fh { font-size: 0.69rem; color: rgba(255,255,255,0.45); margin-top: 3px; line-height: 1.4; }
+.prize-block { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px; }
+.prize-block h3 { color: var(--gold); font-size: 0.82rem; margin-bottom: 10px; }
+.wf { padding: 14px 18px 22px; max-width: 520px; margin: 0 auto; width: 100%; display: flex; gap: 10px; }
+.btn { padding: 12px 22px; border-radius: 30px; font-size: 0.88rem; font-weight: 700; cursor: pointer; border: none; transition: all 0.18s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-gold  { background: var(--gold); color: var(--text); flex: 1; justify-content: center; }
+.btn-gold:hover  { background: #d4a82a; transform: translateY(-1px); }
+.btn-ghost { background: rgba(255,255,255,0.14); color: white; }
+.btn-ghost:hover { background: rgba(255,255,255,0.22); }
+.done-card { background: rgba(255,255,255,0.09); border-radius: var(--radius-sm); padding: 14px; font-size: 0.8rem; color: rgba(255,255,255,0.82); line-height: 1.75; margin-bottom: 12px; }
+.done-card strong { color: white; }
+.done-card .g { color: var(--gold); font-weight: 700; }
+.info-box { background: rgba(201,149,42,0.15); border: 1px solid rgba(201,149,42,0.35); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 0.78rem; color: rgba(255,255,255,0.8); line-height: 1.6; margin-top: 10px; }
+.info-box strong { color: var(--gold); }
+
+/* ============================
+   APP
+   ============================ */
+#app { display: none; }
+
+/* Header */
+.ah { background: var(--green-dark); color: white; padding: 22px 16px 28px; text-align: center; position: relative; overflow: hidden; }
+.ah::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 15% 60%, rgba(201,149,42,0.18) 0%, transparent 55%),
+              radial-gradient(circle at 85% 40%, rgba(201,149,42,0.12) 0%, transparent 55%);
+  pointer-events: none;
+}
+.ah::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 18px; background: var(--bg); clip-path: ellipse(55% 100% at 50% 100%); }
+.ah-logo { width: 72px; height: 72px; border-radius: 50%; object-fit: contain; background: rgba(255,255,255,0.1); border: 2px solid rgba(201,149,42,0.6); padding: 4px; display: none; margin: 0 auto 10px; }
+.ah-org  { font-size: 0.7rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+.ah-tit  { font-size: 1.85rem; font-weight: 900; line-height: 1.15; margin-bottom: 10px; }
+.ah-cau  { font-size: 0.9rem; opacity: 0.8; max-width: 340px; margin: 0 auto 18px; line-height: 1.55; }
+.ah-badge { display: inline-block; background: var(--gold); color: var(--text); font-size: 1.05rem; font-weight: 800; padding: 8px 28px; border-radius: 30px; margin-bottom: 18px; }
+.ah-ctrs { display: flex; justify-content: center; gap: 22px; font-size: 0.75rem; opacity: 0.85; }
+.ah-ctr  { text-align: center; }
+.ah-ctr-n { display: block; font-size: 1.4rem; font-weight: 800; color: var(--gold); }
+
+/* Prizes carousel */
+.pw { background: var(--white); padding: 22px 0 14px; border-bottom: 1px solid var(--border); }
+.pw-lbl { text-align: center; font-size: 0.67rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+.cr { position: relative; overflow: hidden; }
+.cr-track { display: flex; transition: transform 0.55s cubic-bezier(0.4,0,0.2,1); }
+.pr-slide { min-width: 100%; padding: 0 28px 4px; text-align: center; }
+.pr-ring  { width: 110px; height: 110px; border-radius: 50%; border: 3px solid var(--gold); overflow: hidden; margin: 0 auto 12px; background: var(--green-light); display: flex; align-items: center; justify-content: center; }
+.pr-ring img { width: 100%; height: 100%; object-fit: cover; }
+.pr-ring .pe { font-size: 2.8rem; }
+.pr-side  { font-size: 0.65rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--green); margin-bottom: 3px; }
+.pr-name  { font-size: 1.05rem; font-weight: 800; margin-bottom: 4px; }
+.pr-desc  { font-size: 0.78rem; color: var(--muted); margin-bottom: 5px; max-width: 280px; margin-left: auto; margin-right: auto; line-height: 1.4; }
+.pr-donor { font-size: 0.73rem; color: var(--gold); font-weight: 600; }
+.cr-dots  { display: flex; justify-content: center; gap: 7px; margin-top: 14px; padding-bottom: 6px; }
+.cdot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); cursor: pointer; transition: all 0.2s; }
+.cdot.active { background: var(--green); transform: scale(1.25); }
+
+/* Premio key */
+.dk { background: var(--gold-light); border-top: 1px solid #edd88a; border-bottom: 1px solid #edd88a; padding: 10px 16px; }
+.dk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 480px; margin: 0 auto; }
+.dk-box  { background: white; border-radius: var(--radius-sm); border: 1px solid #edd88a; padding: 10px 12px; text-align: center; }
+.dk-lbl  { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 3px; }
+.dk-val  { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+
+/* CTA */
+.cta { padding: 22px 18px; text-align: center; background: var(--bg); }
+.cta h2 { font-size: 1.15rem; font-weight: 800; margin-bottom: 8px; }
+.cta p  { font-size: 0.81rem; color: var(--muted); margin-bottom: 18px; line-height: 1.55; max-width: 340px; margin-left: auto; margin-right: auto; }
+.cta-btn { display: inline-block; background: var(--green); color: white; font-size: 1rem; font-weight: 800; padding: 15px 36px; border-radius: 30px; cursor: pointer; border: none; animation: pulse 2.2s ease-in-out infinite; transition: background 0.2s; }
+.cta-btn:hover { background: var(--green-dark); }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(61,122,79,0.45);} 50%{box-shadow:0 0 0 12px rgba(61,122,79,0);} }
+
+/* Grid */
+.gw { padding: 16px; max-width: 520px; margin: 0 auto; }
+.g-prog { margin-bottom: 12px; }
+.g-bar  { height: 9px; background: var(--border); border-radius: 5px; overflow: hidden; }
+.g-fill { height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--green), var(--gold)); transition: width 0.55s ease; }
+.g-txt  { text-align: center; font-size: 0.73rem; color: var(--muted); margin-top: 5px; }
+.g-leg  { display: flex; gap: 14px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; }
+.leg    { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--muted); }
+.ld     { width: 13px; height: 13px; border-radius: 3px; }
+.ld-f   { background: var(--green); }
+.ld-r   { background: var(--orange); }
+.ld-c   { background: var(--border); }
+.num-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.nb { aspect-ratio: 1; border-radius: 6px; border: none; cursor: pointer; font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.14s; touch-action: manipulation; }
+.nb:active { transform: scale(0.88); }
+.nb.free     { background: var(--green); color: white; }
+.nb.free:hover { background: var(--green-dark); transform: scale(1.1); z-index: 1; }
+.nb.reserved { background: var(--orange); color: white; cursor: not-allowed; }
+.nb.confirmed{ background: var(--border); color: var(--muted); cursor: not-allowed; }
+.nb.expiring { background: #f0a500; color: white; cursor: not-allowed; } /* casi caducado */
+
+/* Aviso tiempo reserva */
+.timer-badge { font-size: 0.62rem; position: absolute; bottom: 1px; right: 2px; opacity: 0.7; }
+
+/* Howto */
+.howto { padding: 22px 18px; background: var(--white); border-top: 1px solid var(--border); }
+.howto h2 { font-size: 1rem; font-weight: 800; text-align: center; margin-bottom: 16px; }
+.steps { max-width: 380px; margin: 0 auto; }
+.step  { display: flex; gap: 12px; margin-bottom: 14px; align-items: flex-start; }
+.sn    { width: 28px; height: 28px; border-radius: 50%; background: var(--green); color: white; font-size: 0.82rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.st h4 { font-size: 0.97rem; font-weight: 700; margin-bottom: 3px; }
+.st p  { font-size: 0.88rem; color: var(--muted); line-height: 1.5; }
+
+/* Share */
+.shr { padding: 18px 16px; text-align: center; background: var(--bg); border-top: 1px solid var(--border); }
+.shr h3 { font-size: 0.82rem; color: var(--muted); margin-bottom: 12px; }
+.shr-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.sb { padding: 9px 18px; border-radius: 22px; border: none; cursor: pointer; font-size: 0.78rem; font-weight: 700; display: flex; align-items: center; gap: 5px; transition: opacity 0.18s, transform 0.15s; }
+.sb:hover { opacity: 0.88; transform: translateY(-1px); }
+.sb-wa   { background: #25d366; color: white; }
+.sb-fb   { background: #1877f2; color: white; }
+.sb-copy { background: var(--border); color: var(--text); }
+
+/* Footer */
+.af { background: var(--green-dark); color: white; padding: 22px 18px; text-align: center; }
+.af-logo { width: 48px; height: 48px; border-radius: 50%; object-fit: contain; background: rgba(255,255,255,0.1); padding: 3px; margin: 0 auto 10px; border: 1px solid rgba(201,149,42,0.4); display: none; }
+.af-org  { font-size: 0.88rem; font-weight: 700; margin-bottom: 4px; }
+.af-cau  { font-size: 0.73rem; opacity: 0.65; margin-bottom: 14px; }
+.af-links { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+.af-link  { color: var(--gold); font-size: 0.75rem; cursor: pointer; }
+.af-link:hover { opacity: 0.75; }
+
+/* ============================
+   MODALS
+   ============================ */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 500; align-items: flex-end; justify-content: center; }
+.overlay.open { display: flex; }
+.modal { background: white; border-radius: 22px 22px 0 0; padding: 22px 20px 36px; width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; animation: sUp 0.28s cubic-bezier(0.4,0,0.2,1); position: relative; }
+@keyframes sUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.m-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 18px; }
+.m-x { position: absolute; top: 14px; right: 14px; background: var(--border); border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 0.88rem; display: flex; align-items: center; justify-content: center; }
+.num-badge { display: inline-block; background: var(--green); color: white; font-size: 2rem; font-weight: 900; padding: 4px 18px; border-radius: 10px; margin-bottom: 12px; }
+.instr { background: var(--bg); border-radius: var(--radius-sm); padding: 14px; margin: 14px 0; font-size: 1rem; color: var(--muted); line-height: 1.8; }
+.instr strong { color: var(--text); font-size: 1rem; }
+.instr .big { font-size: 1.2rem; color: var(--green); font-weight: 800; display: block; margin: 10px 0 6px; }
+.copy-chip { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 3px 10px; font-size: 0.78rem; cursor: pointer; color: var(--green); font-weight: 700; }
+.warn-box  { background: #fff8e7; border: 1px solid #f0c040; border-radius: var(--radius-sm); padding: 12px 14px; font-size: 0.93rem; color: #7a5c00; line-height: 1.55; margin-top: 10px; }
+.send-proof { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.proof-btn { padding: 12px 10px; border-radius: 22px; border: none; cursor: pointer; font-size: 0.88rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; transition: opacity 0.2s; }
+.proof-btn:hover { opacity: 0.85; }
+.proof-wa  { background: #25d366; color: white; }
+.proof-em  { background: var(--green); color: white; }
+
+/* Admin modal */
+#admOverlay { align-items: center; }
+#admOverlay .modal { border-radius: 16px; max-height: 88vh; }
+.a-tabs { display: flex; gap: 4px; margin-bottom: 14px; flex-wrap: wrap; }
+.atab { padding: 6px 11px; border-radius: 20px; border: 1px solid var(--border); background: white; font-size: 0.72rem; font-weight: 600; cursor: pointer; color: var(--muted); transition: all 0.15s; }
+.atab.active { background: var(--green); color: white; border-color: var(--green); }
+.ag-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; margin-bottom: 12px; }
+.ag { aspect-ratio: 1; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; font-size: 0.62rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
+.ag:hover { opacity: 0.72; transform: scale(1.06); }
+.ag.free     { background: var(--green); color: white; border-color: var(--green); }
+.ag.reserved { background: var(--orange); color: white; border-color: var(--orange); }
+.ag.confirmed{ background: var(--border); color: var(--muted); }
+.plist { max-height: 200px; overflow-y: auto; }
+.pitem { padding: 8px 10px; border-radius: var(--radius-sm); background: var(--bg); margin-bottom: 5px; font-size: 0.77rem; display: flex; justify-content: space-between; align-items: center; }
+.pnum  { background: var(--green); color: white; border-radius: 4px; padding: 2px 6px; font-weight: 700; font-size: 0.72rem; }
+.mf-g  { margin-bottom: 10px; }
+.mf-g label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.mf-g input, .mf-g select { width: 100%; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.86rem; outline: none; }
+.mf-g input:focus { border-color: var(--green); }
+.mbtn { width: 100%; padding: 13px; border-radius: 30px; border: none; cursor: pointer; font-size: 0.92rem; font-weight: 800; margin-top: 10px; transition: all 0.18s; }
+.mb-green { background: var(--green); color: white; }
+.mb-green:hover { background: var(--green-dark); }
+.mb-gold  { background: var(--gold); color: var(--text); }
+.mb-grey  { background: var(--border); color: var(--text); }
+.once-res { background: var(--green-light); border: 1px solid var(--green); border-radius: var(--radius-sm); padding: 14px; margin: 12px 0; display: none; }
+.once-lbl { font-size: 0.72rem; font-weight: 700; color: var(--green); margin-bottom: 4px; }
+.once-num { font-size: 2.2rem; font-weight: 900; color: var(--green-dark); }
+.once-wins{ margin-top: 10px; font-size: 0.78rem; line-height: 1.7; }
+#aLoginErr { color: var(--red); font-size: 0.76rem; margin-top: 4px; display: none; }
+.a-section-title { font-size: 0.75rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+
+/* Winner */
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 598; display: none; }
+#confetti.show { display: block; }
+#winOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 600; align-items: center; justify-content: center; flex-direction: column; text-align: center; padding: 24px; }
+#winOverlay.show { display: flex; }
+.wbox { color: white; animation: popIn 0.55s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes popIn { 0%{transform:scale(0.2);opacity:0;} 60%{transform:scale(1.08);} 100%{transform:scale(1);opacity:1;} }
+.wn-pre  { font-size: 1.1rem; margin-bottom: 8px; opacity: 0.9; }
+.wn-num  { font-size: 5rem; font-weight: 900; color: var(--gold); line-height: 1; margin-bottom: 8px; }
+.wn-dig  { font-size: 1rem; margin-bottom: 16px; opacity: 0.85; }
+.wn-prs  { margin-bottom: 22px; }
+.wn-pr   { font-size: 0.88rem; opacity: 0.85; margin-bottom: 6px; }
+#btnWinClose { padding: 11px 32px; border-radius: 22px; background: var(--gold); color: var(--text); border: none; cursor: pointer; font-weight: 800; font-size: 0.9rem; }
+
+/* Notification toast */
+#toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: white; padding: 10px 20px; border-radius: 22px; font-size: 0.8rem; font-weight: 600; z-index: 9000; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+#toast.show { opacity: 1; }
+
+@media (min-width: 400px) { .nb { font-size: 0.82rem; } }
+@media (min-width: 520px) { .modal { border-radius: 22px; } .overlay { align-items: center; } #admOverlay .modal { border-radius: 16px; } }
+</style>
+</head>
+<body>
+
+<!-- ============================
+     PANTALLA SETUP FIREBASE
+     ============================ -->
+<div id="fbSetup" style="display:none;">
+  <div class="fb-wrap">
+    <div class="fb-logo">🔥</div>
+    <p class="fb-title">Conectar con Firebase</p>
+    <p class="fb-sub">Para que el cuadrante se actualice en tiempo real para todos los participantes, necesitas una base de datos gratuita de Firebase (Google). Sigue estos pasos — son unos 5 minutos:</p>
+    <div class="fb-steps">
+      <div class="fb-step"><strong>1.</strong> Ve a <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> y crea un proyecto nuevo (nombre: "sorteo-esparto" o el que quieras)</div>
+      <div class="fb-step"><strong>2.</strong> Dentro del proyecto, ve a <strong>"Realtime Database"</strong> → Crear base de datos → Europa → Modo de prueba</div>
+      <div class="fb-step"><strong>3.</strong> Ve a <strong>Configuración del proyecto</strong> (rueda dentada) → pestaña "General" → baja hasta "Tu aplicación" → añade una app web (icono &lt;/&gt;) → copia el objeto <strong>firebaseConfig</strong></div>
+      <div class="fb-step"><strong>4.</strong> Pega aquí el objeto JSON de configuración que te da Firebase:</div>
+    </div>
+    <textarea class="fb-ta" id="fbJson" placeholder='Pega aquí tu configuración de Firebase, por ejemplo:
+{
+  "apiKey": "AIzaSy...",
+  "authDomain": "miproyecto.firebaseapp.com",
+  "databaseURL": "https://miproyecto-default-rtdb.europe-west1.firebasedatabase.app",
+  "projectId": "miproyecto",
+  "storageBucket": "miproyecto.appspot.com",
+  "messagingSenderId": "123456789",
+  "appId": "1:123456789:web:abc123"
+}'></textarea>
+    <p class="fb-err" id="fbErr">⚠️ La configuración no es válida. Revisa que hayas pegado el JSON completo.</p>
+    <button class="btn btn-gold" style="width:100%;" onclick="connectFirebase()">Conectar y continuar →</button>
+  </div>
+</div>
+
+<!-- ============================
+     WIZARD
+     ============================ -->
+<div id="wizard" style="display:none;">
+  <div class="wh">
+    <h1>🎟️ Configurar Sorteo Solidario</h1>
+    <p>Solo tienes que hacerlo una vez</p>
+  </div>
+  <div class="wp">
+    <div class="wp-bar"><div class="wp-fill" id="wpFill" style="width:0%"></div></div>
+    <span class="wp-lbl" id="wpLbl">Paso 1 de 5</span>
+  </div>
+  <div class="wb">
+
+    <!-- PASO 0: Básico -->
+    <div class="ws active" id="ws-0">
+      <h2>📋 Información básica</h2>
+      <p class="wd">¿Quién organiza este sorteo y con qué fin?</p>
+      <div class="fg"><label>Nombre del organizador o asociación *</label><input id="w-org" type="text" placeholder="Ej: Esparto Vivo"></div>
+      <div class="fg"><label>URL del logotipo (opcional)</label><input id="w-logo" type="url" placeholder="https://… enlace directo a la imagen del logo"><p class="fh">Sube el logo a imgbb.com o imgur.com y pega el enlace directo</p></div>
+      <div class="fg"><label>Título del sorteo *</label><input id="w-title" type="text" placeholder="Ej: Sorteo Solidario Primavera 2026"></div>
+      <div class="fg"><label>Causa / para qué es la recaudación</label><textarea id="w-cause" placeholder="Ej: Para financiar los talleres de esparto y las actividades de la asociación"></textarea></div>
+      <div class="fg"><label>Contraseña del panel de administrador *</label><input id="w-pwd" type="password" placeholder="Elige una contraseña"><p class="fh">Solo tú la sabrás. La necesitarás para confirmar pagos y gestionar el sorteo.</p></div>
+    </div>
+
+    <!-- PASO 1: Premios (2 premios) -->
+    <div class="ws" id="ws-1">
+      <h2>🏆 Los dos premios</h2>
+      <p class="wd">El número de la ONCE tiene 5 dígitos. Los 2 últimos dígitos de la derecha dan el Premio 1, y los 2 dígitos de la izquierda dan el Premio 2.</p>
+
+      <div class="prize-block">
+        <h3>🥇 Premio 1 — Dos últimas cifras (derecha)</h3>
+        <div class="fg"><label>Nombre del premio</label><input id="p1n" type="text" placeholder="Ej: Sexto de esparto artesanal"></div>
+        <div class="fg"><label>Descripción</label><input id="p1d" type="text" placeholder="Ej: Cesta tejida a mano con esparto natural"></div>
+        <div class="fg"><label>Donado por</label><input id="p1do" type="text" placeholder="Ej: Taller Esparto Vivo"></div>
+        <div class="fg"><label>URL de foto (opcional)</label><input id="p1i" type="url" placeholder="https://…/foto.jpg"></div>
+      </div>
+
+      <div class="prize-block">
+        <h3>🥈 Premio 2 — Dos primeras cifras (izquierda)</h3>
+        <div class="fg"><label>Nombre del premio</label><input id="p2n" type="text" placeholder="Ej: Capacha mini de esparto"></div>
+        <div class="fg"><label>Descripción</label><input id="p2d" type="text" placeholder="Ej: Bolso mini artesanal de esparto"></div>
+        <div class="fg"><label>Donado por</label><input id="p2do" type="text" placeholder="Ej: Artesana Carmen López"></div>
+        <div class="fg"><label>URL de foto (opcional)</label><input id="p2i" type="url" placeholder="https://…/foto.jpg"></div>
+      </div>
+    </div>
+
+    <!-- PASO 2: Pagos -->
+    <div class="ws" id="ws-2">
+      <h2>💳 Forma de pago</h2>
+      <p class="wd">¿Cómo va a pagar la gente el 1€? Solo necesitas un número de Bizum. El Ko-fi es opcional como alternativa.</p>
+      <div class="fg"><label>📱 Número de Bizum *</label><input id="w-bizum" type="tel" placeholder="Ej: 600 123 456"></div>
+      <div class="fg"><label>☕ Enlace Ko-fi (opcional)</label><input id="w-kofi" type="url" placeholder="https://ko-fi.com/tuasociacion"><p class="fh">Para quienes no tengan Bizum. Gratis en ko-fi.com.</p></div>
+      <div class="fg"><label>📬 WhatsApp para recibir comprobantes *</label><input id="w-contact" type="text" placeholder="Ej: 600 123 456"><p class="fh">Los participantes podrán mandarte la captura del Bizum directamente por WhatsApp.</p></div>
+      <div class="fg"><label>📧 Email para recibir comprobantes</label><input id="w-emailpub" type="email" placeholder="Ej: espartovivo@gmail.com"><p class="fh">Opcional pero recomendado. Los participantes podrán enviarte la captura también por email.</p></div>
+    </div>
+
+    <!-- PASO 3: Notificaciones -->
+    <div class="ws" id="ws-3">
+      <h2>🔔 Notificaciones automáticas</h2>
+      <p class="wd">Cada vez que alguien reserve un número, te avisamos al instante por WhatsApp y por email para que vayas al Bizum a confirmar el pago.</p>
+
+      <div class="fg">
+        <label>📱 Tu número de WhatsApp (con código de país)</label>
+        <input id="w-waphone" type="tel" placeholder="Ej: 34600123456">
+        <p class="fh">Formato: código de país + número sin espacios. España = 34 + número</p>
+      </div>
+      <div class="fg">
+        <label>🔑 Clave API de CallMeBot (WhatsApp gratuito)</label>
+        <input id="w-wakey" type="text" placeholder="Ej: 123456">
+        <p class="fh">Gratis. Para obtenerla: envía "I allow callmebot to send me messages" al +34 644 44 11 12 por WhatsApp. Te responderá con tu clave API.</p>
+      </div>
+
+      <div class="fg">
+        <label>📧 Tu email para notificaciones</label>
+        <input id="w-email" type="email" placeholder="tu@email.com">
+      </div>
+      <div class="fg">
+        <label>🔑 Clave pública de EmailJS</label>
+        <input id="w-ejkey" type="text" placeholder="Ej: user_abc123">
+        <p class="fh">Gratis en emailjs.com (200 emails/mes). Necesitarás: Service ID, Template ID y Public Key. <a href="https://www.emailjs.com" target="_blank" style="color:var(--gold);">emailjs.com</a></p>
+      </div>
+      <div class="fg"><label>EmailJS — Service ID</label><input id="w-ejsvc" type="text" placeholder="service_xxxxxxx"></div>
+      <div class="fg"><label>EmailJS — Template ID</label><input id="w-ejtpl" type="text" placeholder="template_xxxxxxx"></div>
+
+      <div class="info-box">
+        <strong>💡 Estas notificaciones son opcionales.</strong> Si no las configuras ahora, puedes saltarte este paso y añadirlas más adelante desde "Editar configuración". Sin ellas, tendrás que revisar el cuadrante manualmente para ver nuevas reservas.
+      </div>
+    </div>
+
+    <!-- PASO 4: Listo -->
+    <div class="ws" id="ws-4">
+      <h2>🚀 ¡Todo listo!</h2>
+      <p class="wd">Tu sorteo está configurado y conectado en tiempo real. Así funciona:</p>
+      <div class="done-card">
+        <p>📲 <strong>Alguien entra en la web</strong> y hace clic en un número libre</p>
+        <p>⚡ El número se bloquea <span class="g">al instante para todo el mundo</span> — nadie más puede cogerlo</p>
+        <p>🔔 Te llega un aviso por <span class="g">WhatsApp y email</span> diciéndote qué número se ha reservado</p>
+        <p>💶 La persona te manda <span class="g">1€ por Bizum</span> con el número en el concepto</p>
+        <p>🔐 Tú entras al <span class="g">panel de administrador</span> y confirmas el pago</p>
+        <p>⏱️ Si no confirmas en <span class="g">24 horas</span>, el número se libera automáticamente</p>
+        <p>🎯 Cuando el cuadrante se llene, introduces el <span class="g">número de la ONCE</span> para revelar los ganadores</p>
+      </div>
+      <div class="info-box">
+        <strong>Para subirlo a internet gratis:</strong> Sube este archivo HTML a <a href="https://github.com" target="_blank" style="color:var(--gold);">GitHub Pages</a> o arrastra el archivo a <a href="https://netlify.com" target="_blank" style="color:var(--gold);">Netlify</a>. Tendrás una URL propia que puedes compartir en Facebook y WhatsApp.
+      </div>
+    </div>
+
+  </div>
+  <div class="wf">
+    <button class="btn btn-ghost" id="btnBack" onclick="wizBack()" style="display:none;">← Atrás</button>
+    <button class="btn btn-gold" id="btnNext" onclick="wizNext()">Siguiente →</button>
+  </div>
+</div>
+
+<!-- ============================
+     APP
+     ============================ -->
+<div id="app">
+  <header class="ah">
+    <img id="aLogo" class="ah-logo" src="" alt="Logo" onerror="this.style.display='none'">
+    <p class="ah-org" id="aOrg">—</p>
+    <h1 class="ah-tit" id="aTit">Sorteo Solidario</h1>
+    <p class="ah-cau" id="aCau"></p>
+    <div class="ah-badge">🎟️ Donativo solidario de 1€ por número</div>
+    <div class="ah-ctrs">
+      <div class="ah-ctr"><span class="ah-ctr-n" id="cFree">99</span>libres</div>
+      <div class="ah-ctr"><span class="ah-ctr-n" id="cRes">0</span>pendientes</div>
+      <div class="ah-ctr"><span class="ah-ctr-n" id="cConf">0</span>confirmados</div>
+    </div>
+  </header>
+
+  <div class="pw">
+    <p class="pw-lbl">🏆 Premios del sorteo</p>
+    <div class="cr"><div class="cr-track" id="crTrack"></div></div>
+    <div class="cr-dots" id="crDots"></div>
+  </div>
+
+  <div class="dk">
+    <div class="dk-grid">
+      <div class="dk-box"><div class="dk-lbl">2 últimas cifras ONCE</div><div class="dk-val" id="dkRight">Premio 1</div></div>
+      <div class="dk-box"><div class="dk-lbl">2 primeras cifras ONCE</div><div class="dk-val" id="dkLeft">Premio 2</div></div>
+    </div>
+  </div>
+
+  <div class="cta">
+    <h2>¡Elige tu número de la suerte! 🍀</h2>
+    <p>Reserva un número libre, haz un <strong>donativo solidario de 1€ por Bizum</strong> y espera al sorteo. ¡Cuadrante en tiempo real!</p>
+    <button class="cta-btn" onclick="document.getElementById('gridAnchor').scrollIntoView({behavior:'smooth'})">Ver el cuadrante ↓</button>
+  </div>
+
+  <div class="gw" id="gridAnchor">
+    <div class="g-prog">
+      <div class="g-bar"><div class="g-fill" id="gFill" style="width:0%"></div></div>
+      <p class="g-txt" id="gTxt">0 de 100 números ocupados</p>
+    </div>
+    <div class="g-leg">
+      <div class="leg"><div class="ld ld-f"></div>Libre</div>
+      <div class="leg"><div class="ld ld-r"></div>Reservado (24h)</div>
+      <div class="leg"><div class="ld ld-c"></div>Confirmado</div>
+    </div>
+    <div class="num-grid" id="numGrid"></div>
+  </div>
+
+  <div class="howto">
+    <h2>¿Cómo participar?</h2>
+    <div class="steps">
+      <div class="step"><div class="sn">1</div><div class="st"><h4>Elige un número libre</h4><p>Toca cualquier número verde — se reserva al instante para todo el mundo</p></div></div>
+      <div class="step"><div class="sn">2</div><div class="st"><h4>Haz tu donativo de 1€ por Bizum</h4><p id="ht-pay">Envía un donativo de 1€ al número de Bizum indicando en el CONCEPTO el número que has elegido</p></div></div>
+      <div class="step"><div class="sn">3</div><div class="st"><h4>Manda el comprobante</h4><p id="ht-contact">Envíanos la captura del donativo por WhatsApp o email — te confirmamos la reserva al momento</p></div></div>
+      <div class="step"><div class="sn">4</div><div class="st"><h4>¡Espera al sorteo!</h4><p>Cuando el cuadrante se llene usamos el número de la ONCE para elegir a los 2 ganadores</p></div></div>
+    </div>
+  </div>
+
+  <div class="shr">
+    <h3>📢 ¡Comparte y ayuda a llenar el cuadrante!</h3>
+    <div class="shr-btns">
+      <button class="sb sb-wa" onclick="shareWA()">💬 WhatsApp</button>
+      <button class="sb sb-fb" onclick="shareFB()">👍 Facebook</button>
+      <button class="sb sb-copy" onclick="copyLink()">🔗 Copiar enlace</button>
+    </div>
+  </div>
+
+  <footer class="af">
+    <img id="fLogo" class="af-logo" src="" alt="Logo" onerror="this.style.display='none'">
+    <p class="af-org" id="fOrg">—</p>
+    <p class="af-cau" id="fCau">Sorteo sin ánimo de lucro · Recaudación de fondos</p>
+    <div class="af-links">
+      <span class="af-link" onclick="openAdm()">🔐 Administrador</span>
+      <span class="af-link" onclick="openWizEdit()">⚙️ Editar configuración</span>
+    </div>
+  </footer>
+</div>
+
+<!-- ============================
+     MODAL: CONFIRMACIÓN DE RESERVA
+     ============================ -->
+<div class="overlay" id="confirmOverlay">
+  <div class="modal" style="border-radius:22px 22px 0 0; text-align:center; padding: 28px 24px 40px;">
+    <div class="m-handle"></div>
+    <button class="m-x" onclick="closeConfirm()">✕</button>
+    <div style="font-size:3.5rem; margin: 8px 0 4px;">🎟️</div>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:6px;">¿Confirmas tu elección?</p>
+    <div class="num-badge" id="cNum" style="margin:0 auto 14px;">00</div>
+    <p style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:6px;">Número <span id="cNumText">00</span></p>
+    <p style="font-size:0.92rem;color:var(--muted);margin-bottom:20px;line-height:1.5;">Si confirmas, este número queda reservado para ti durante <strong>24&nbsp;horas</strong> mientras realizas el <strong>donativo solidario de 1€</strong> por Bizum.</p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="mbtn mb-grey" onclick="closeConfirm()" style="flex:1;max-width:150px;font-size:0.95rem;">✕ Cancelar</button>
+      <button class="mbtn" id="btnConfirmReserve" onclick="confirmReserve()" style="flex:1;max-width:150px;font-size:0.95rem;background:var(--green);">✓ Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================
+     MODAL: NÚMERO RESERVADO
+     ============================ -->
+<div class="overlay" id="numOverlay">
+  <div class="modal">
+    <div class="m-handle"></div>
+    <button class="m-x" onclick="closeNum()">✕</button>
+    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:4px;">Número reservado</p>
+    <div class="num-badge" id="mNum">00</div>
+    <h2 id="mTitle" style="font-size:1.05rem;margin-bottom:6px;"></h2>
+    <div class="instr" id="mInstr"></div>
+    <div class="warn-box">⏱️ Tienes <strong>24 horas</strong> para hacer el pago. Si no se confirma, el número vuelve a estar libre para todos.</div>
+
+    <div style="margin-top:16px;margin-bottom:10px;">
+      <label style="font-size:0.92rem;font-weight:700;color:var(--text);display:block;margin-bottom:6px;">📱 Tu número de Bizum (para el comprobante):</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input id="senderPhone" type="tel" inputmode="numeric" placeholder="Ej: 600 123 456"
+          style="flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-size:1rem;outline:none;background:var(--bg);"
+          oninput="this.style.borderColor=this.value.trim()?'var(--green)':'var(--border)'">
+      </div>
+      <p style="font-size:0.78rem;color:var(--muted);margin-top:4px;">Escríbelo aquí una vez y se incluirá automáticamente en el mensaje.</p>
+    </div>
+
+    <p style="font-size:0.97rem;font-weight:700;margin-bottom:6px;color:var(--text);">Envíame el comprobante del donativo por:</p>
+    <div class="send-proof">
+      <button class="proof-btn proof-wa" id="btnWA" onclick="sendProofWA()">💬 WhatsApp</button>
+      <button class="proof-btn proof-em" id="btnEM" onclick="sendProofEmail()">📧 Email</button>
+    </div>
+    <button class="mbtn mb-grey" onclick="closeNum()" style="margin-top:12px;font-size:0.9rem;">Ya lo envío, cerrar</button>
+  </div>
+</div>
+
+<!-- ============================
+     MODAL: ADMIN
+     ============================ -->
+<div class="overlay" id="admOverlay" style="align-items:center;">
+  <div class="modal" style="border-radius:16px;">
+    <button class="m-x" onclick="closeAdm()">✕</button>
+
+    <div id="aLogin">
+      <h3 style="margin-bottom:12px;">🔐 Panel de Administrador</h3>
+      <div class="mf-g"><label>Contraseña</label><input id="aPwd" type="password" placeholder="Contraseña de administrador" onkeydown="if(event.key==='Enter')checkPwd()"></div>
+      <p id="aLoginErr">Contraseña incorrecta.</p>
+      <button class="mbtn mb-green" onclick="checkPwd()">Entrar</button>
+    </div>
+
+    <div id="aPanel" style="display:none;">
+      <h3 style="margin-bottom:12px;">⚙️ Panel de Administrador</h3>
+      <div class="a-tabs">
+        <button class="atab active" onclick="aTab('grid')">Cuadrante</button>
+        <button class="atab" onclick="aTab('parts')">Pagos</button>
+        <button class="atab" onclick="aTab('once')">ONCE</button>
+      </div>
+
+      <!-- Cuadrante admin -->
+      <div id="at-grid">
+        <p class="a-section-title">Estado del cuadrante</p>
+        <p style="font-size:0.72rem;color:var(--muted);margin-bottom:8px;">Toca para cambiar: 🟢Libre → 🟠Reservado → ⚫Confirmado → 🟢Libre</p>
+        <div class="ag-grid" id="aGrid"></div>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+          <button class="mbtn mb-gold" style="padding:9px;font-size:0.76rem;" onclick="exportData()">⬇️ Exportar backup</button>
+          <button class="mbtn" style="padding:9px;font-size:0.76rem;background:#C0392B;color:white;" onclick="resetGrid()">🗑️ Limpiar cuadrante</button>
+        </div>
+      </div>
+
+      <!-- Pagos recibidos -->
+      <div id="at-parts" style="display:none;">
+        <p class="a-section-title">Pagos confirmados</p>
+        <div class="plist" id="pList"></div>
+
+        <!-- PAGO EN EFECTIVO -->
+        <div style="margin-top:14px;padding:12px;border-radius:10px;background:#e8f5ee;border:1.5px solid var(--green);">
+          <p class="a-section-title" style="color:var(--green-dark);">💵 Pago en efectivo / en mano</p>
+          <p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">
+            <strong>Paso 1:</strong> Reserva el número al instante para que nadie online lo coja mientras cobras.<br>
+            <strong>Paso 2:</strong> Cuando tengas el euro en la mano, confírmalo.
+          </p>
+          <div class="mf-g">
+            <label>Número elegido</label>
+            <select id="cashNum"><option value="">-- Selecciona número libre --</option></select>
+          </div>
+          <div class="mf-g">
+            <label>Nombre de la persona *</label>
+            <input id="cashName" type="text" placeholder="Ej: María García">
+          </div>
+          <div class="mf-g">
+            <label>Teléfono (opcional)</label>
+            <input id="cashPhone" type="tel" placeholder="600 123 456">
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="mbtn" style="flex:1;padding:9px;font-size:0.85rem;background:var(--orange);color:white;" onclick="reserveCash()">🔒 Reservar ahora</button>
+            <button class="mbtn mb-green" style="flex:1;padding:9px;font-size:0.85rem;" onclick="registerCash()">💵 Confirmar cobro</button>
+          </div>
+          <p style="font-size:0.72rem;color:var(--muted);margin-top:6px;line-height:1.4;">«Reservar» bloquea el número al instante (naranja). «Confirmar cobro» lo marca como pagado (gris).</p>
+        </div>
+
+        <!-- PAGO BIZUM SIN CONCEPTO -->
+        <div style="margin-top:10px;padding-top:12px;border-top:1px solid var(--border);">
+          <p class="a-section-title">⚠️ Bizum sin concepto (pago huérfano)</p>
+          <p style="font-size:0.75rem;color:var(--muted);margin-bottom:10px;">Si alguien pagó el Bizum pero olvidó escribir el número en el concepto, asígnalo aquí.</p>
+          <div class="mf-g"><label>Número elegido por el pagador</label>
+            <select id="orphanNum"><option value="">-- Selecciona número --</option></select>
+          </div>
+          <div class="mf-g"><label>Teléfono del pagador (del Bizum)</label><input id="orphanPhone" type="tel" placeholder="600 123 456"></div>
+          <button class="mbtn" style="padding:9px;font-size:0.82rem;background:var(--orange);color:white;" onclick="assignOrphan()">✅ Confirmar pago huérfano</button>
+        </div>
+
+        <button class="mbtn mb-gold" style="margin-top:10px;padding:9px;font-size:0.76rem;" onclick="exportCSV()">⬇️ Exportar participantes CSV</button>
+      </div>
+
+      <!-- ONCE -->
+      <div id="at-once" style="display:none;">
+        <p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;line-height:1.55;">Introduce el número del cupón de la ONCE del día del sorteo (5 dígitos). El sistema calculará los ganadores automáticamente.</p>
+        <div class="mf-g"><label>Número ONCE (5 dígitos)</label><input id="onceIn" type="text" inputmode="numeric" maxlength="5" placeholder="Ej: 12345"></div>
+        <button class="mbtn mb-green" onclick="revealWinners()">🎊 Revelar ganadores</button>
+        <div class="once-res" id="onceRes">
+          <div class="once-lbl">Número de la ONCE:</div>
+          <div class="once-num" id="onceDisp">—</div>
+          <div class="once-wins" id="onceWins"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Winner overlay -->
+<canvas id="confetti"></canvas>
+<div id="winOverlay">
+  <div class="wbox">
+    <p class="wn-pre">🎊 ¡Número de la ONCE!</p>
+    <div class="wn-num" id="wNum">—</div>
+    <p class="wn-dig" id="wDig">—</p>
+    <div class="wn-prs" id="wPrs"></div>
+    <button id="btnWinClose" onclick="closeWinner()">Cerrar</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ============================
+     JAVASCRIPT
+     ============================ -->
+<script>
+/* ============================================
+   ESTADO GLOBAL
+   ============================================ */
+let db  = null;
+let cfg = {};
+let currentNum    = null;
+let carouselIdx   = 0;
+let carouselTimer = null;
+const HOURS_24    = 24 * 60 * 60 * 1000;
+const WIZ_TOTAL   = 5;
+let wizStep       = 0;
+
+/* ============================================
+   INIT
+   ============================================ */
+// ============================================
+// CONFIGURACIÓN FIREBASE — YA LISTA ✅
+// ============================================
+const FIREBASE_CFG = {
+  apiKey: "AIzaSyCdoLaH20HrWl-M4gj1Ypy-eavIIF7yUqA",
+  authDomain: "sorteo-df1b7.firebaseapp.com",
+  databaseURL: "https://sorteo-df1b7-default-rtdb.firebaseio.com",
+  projectId: "sorteo-df1b7",
+  storageBucket: "sorteo-df1b7.firebasestorage.app",
+  messagingSenderId: "252744594124",
+  appId: "1:252744594124:web:6af71504ea287c41a28869"
+};
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await initFirebase(FIREBASE_CFG);
+});
+
+function getSavedFbCfg() {
+  try { const s = localStorage.getItem('srt_fb'); return s ? JSON.parse(s) : null; } catch { return null; }
+}
+
+async function initFirebase(fbCfg) {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(fbCfg);
+    db = firebase.database();
+    localStorage.setItem('srt_fb', JSON.stringify(fbCfg));
+    const snap = await db.ref('cfg').get();
+    if (snap.exists()) {
+      cfg = snap.val();
+      // ── Migración automática ──────────────────────────────────────────────
+      // Si cfg.contact tiene un @, es que el email fue puesto en el campo
+      // incorrecto. Lo movemos a emailPub y ponemos el Bizum en contact.
+      let migrated = false;
+      if (cfg.contact && cfg.contact.includes('@')) {
+        if (!cfg.emailPub) cfg.emailPub = cfg.contact;
+        cfg.contact = cfg.bizum || '';
+        migrated = true;
+      }
+      // Si emailPub sigue vacío pero ejEmail tiene valor, usarlo como emailPub
+      if (!cfg.emailPub && cfg.ejEmail) {
+        cfg.emailPub = cfg.ejEmail;
+        migrated = true;
+      }
+      if (migrated) db.ref('cfg').set(cfg); // guardar la corrección en Firebase
+      // ─────────────────────────────────────────────────────────────────────
+      startApp();
+    } else {
+      showWizard();
+    }
+  } catch (e) {
+    hideAll(); showEl('fbSetup','flex');
+    showEl('fbErr','block');
+  }
+}
+
+function connectFirebase() {
+  const raw = el('fbJson').value.trim();
+  let parsed;
+  try {
+    // Allow both object literal and JSON
+    parsed = JSON.parse(raw.replace(/^\s*const\s+\w+\s*=\s*/, '').replace(/;?\s*$/, ''));
+  } catch {
+    // Try extracting JSON object from pasted code
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (m) { try { parsed = JSON.parse(m[0]); } catch { parsed = null; } }
+  }
+  if (!parsed || !parsed.apiKey || !parsed.databaseURL) {
+    el('fbErr').style.display = 'block'; return;
+  }
+  el('fbErr').style.display = 'none';
+  hideAll();
+  initFirebase(parsed);
+}
+
+/* ============================================
+   WIZARD
+   ============================================ */
+function showWizard() { hideAll(); showEl('wizard','flex'); setWizStep(0); }
+
+function wizNext() {
+  if (wizStep === 0) {
+    if (!v('w-org') || !v('w-title') || !v('w-pwd')) { toast('Rellena los campos obligatorios (*)'); return; }
+  }
+  if (wizStep === 2 && !v('w-bizum')) { toast('Introduce al menos el número de Bizum'); return; }
+  if (wizStep < WIZ_TOTAL - 1) setWizStep(wizStep + 1);
+  else finishWizard();
+}
+function wizBack() { if (wizStep > 0) setWizStep(wizStep - 1); }
+
+function setWizStep(n) {
+  const prev = el(`ws-${wizStep}`);
+  if (prev) prev.classList.remove('active'); // seguro aunque wizStep sea -1
+  wizStep = n;
+  el(`ws-${wizStep}`).classList.add('active');
+  const pct = Math.round(n / (WIZ_TOTAL - 1) * 100);
+  el('wpFill').style.width = pct + '%';
+  el('wpLbl').textContent  = `Paso ${n + 1} de ${WIZ_TOTAL}`;
+  el('btnBack').style.display = n > 0 ? 'block' : 'none';
+  el('btnNext').textContent = n === WIZ_TOTAL - 1 ? '🚀 ¡Lanzar el sorteo!' : 'Siguiente →';
+}
+
+function finishWizard() {
+  cfg = {
+    organizer: v('w-org'), logo: v('w-logo'), title: v('w-title'),
+    cause: v('w-cause'), password: v('w-pwd'),
+    prizes: [
+      { name: v('p1n') || 'Premio 1', desc: v('p1d'), donor: v('p1do'), img: v('p1i'), side: 'right' },
+      { name: v('p2n') || 'Premio 2', desc: v('p2d'), donor: v('p2do'), img: v('p2i'), side: 'left'  },
+    ],
+    bizum: v('w-bizum'), kofi: v('w-kofi'), contact: v('w-contact'), emailPub: v('w-emailpub'),
+    waPhone: v('w-waphone'), waKey: v('w-wakey'),
+    ejEmail: v('w-email'), ejKey: v('w-ejkey'), ejSvc: v('w-ejsvc'), ejTpl: v('w-ejtpl'),
+  };
+  db.ref('cfg').set(cfg).then(() => { hideAll(); startApp(); });
+}
+
+function openWizEdit() {
+  // Pre-fill wizard
+  const s = (id, val) => { if (el(id)) el(id).value = val || ''; };
+  s('w-org',cfg.organizer); s('w-logo',cfg.logo); s('w-title',cfg.title);
+  s('w-cause',cfg.cause); s('w-bizum',cfg.bizum); s('w-kofi',cfg.kofi);
+  s('w-contact',cfg.contact); s('w-emailpub',cfg.emailPub); s('w-waphone',cfg.waPhone); s('w-wakey',cfg.waKey);
+  s('w-email',cfg.ejEmail); s('w-ejkey',cfg.ejKey); s('w-ejsvc',cfg.ejSvc); s('w-ejtpl',cfg.ejTpl);
+  if (cfg.prizes) {
+    s('p1n',cfg.prizes[0]?.name); s('p1d',cfg.prizes[0]?.desc); s('p1do',cfg.prizes[0]?.donor); s('p1i',cfg.prizes[0]?.img);
+    s('p2n',cfg.prizes[1]?.name); s('p2d',cfg.prizes[1]?.desc); s('p2do',cfg.prizes[1]?.donor); s('p2i',cfg.prizes[1]?.img);
+  }
+  hideAll(); showEl('wizard','flex'); wizStep = -1; setWizStep(0);
+}
+
+/* ============================================
+   APP
+   ============================================ */
+function startApp() {
+  hideAll(); showEl('app','block');
+  applyConfig();
+  renderCarousel();
+  startCarousel();
+  listenNumbers(); // Firebase real-time listener
+  // Init EmailJS if configured
+  if (cfg.ejKey) emailjs.init(cfg.ejKey);
+}
+
+function applyConfig() {
+  document.title = cfg.title || 'Sorteo Solidario';
+  el('aOrg').textContent = cfg.organizer || '';
+  el('aTit').textContent = cfg.title     || 'Sorteo Solidario';
+  el('aCau').textContent = cfg.cause     || '';
+  el('fOrg').textContent = cfg.organizer || '';
+  el('fCau').textContent = `Sorteo sin ánimo de lucro · ${cfg.cause || 'Recaudación de fondos'}`;
+
+  // Logo
+  if (cfg.logo) {
+    el('aLogo').src = cfg.logo; el('aLogo').style.display = 'block';
+    el('fLogo').src = cfg.logo; el('fLogo').style.display = 'block';
+  }
+
+  // Prize key
+  el('dkRight').textContent = cfg.prizes?.[0]?.name || 'Premio 1';
+  el('dkLeft').textContent  = cfg.prizes?.[1]?.name || 'Premio 2';
+
+  // How-to text
+  el('ht-pay').textContent = cfg.bizum
+    ? `Haz un donativo solidario de 1€ por Bizum al ${cfg.bizum} — escribe en el CONCEPTO el número que has elegido`
+    : 'Haz un donativo solidario de 1€ según las instrucciones que aparecen al reservar el número';
+  el('ht-contact').textContent = cfg.contact
+    ? `Manda el comprobante del donativo por WhatsApp o email a ${cfg.contact} y te confirmamos la reserva`
+    : 'Envíanos el comprobante del donativo por WhatsApp o email para confirmar tu número';
+
+  // Selects de número (huérfano y efectivo) — se rellenan con números libres al abrir pagos
+  populateNumSelects();
+}
+
+/* ============================================
+   FIREBASE REAL-TIME LISTENER
+   ============================================ */
+function listenNumbers() {
+  db.ref('numbers').on('value', snap => {
+    const data = snap.val() || {};
+    // Auto-release expired reservations
+    releaseExpired(data);
+    renderGrid(data);
+    updateCounters(data);
+    if (document.getElementById('aPanel').style.display !== 'none') renderAdminGrid(data);
+  });
+}
+
+function releaseExpired(data) {
+  Object.entries(data).forEach(([num, info]) => {
+    if (info?.status === 'reserved' && info?.reservedAt && (Date.now() - info.reservedAt > HOURS_24)) {
+      db.ref(`numbers/${num}`).set({ status: 'free' });
+    }
+  });
+}
+
+/* ============================================
+   GRID
+   ============================================ */
+function renderGrid(data) {
+  const grid = el('numGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i <= 99; i++) {
+    const key  = String(i).padStart(2, '0'); // "00", "01", ... "99"
+    const info = data[key] || { status: 'free' };
+    const s    = info.status || 'free';
+    const btn  = document.createElement('button');
+    btn.className   = `nb ${s}`;
+    btn.textContent = key;
+    btn.dataset.num = key;
+    btn.title = s === 'free' ? `Número ${key} — libre` : s === 'reserved' ? `Número ${key} — reservado` : `Número ${key} — confirmado`;
+    if (s === 'free') btn.onclick = () => showConfirm(key);
+    grid.appendChild(btn);
+  }
+}
+
+function updateCounters(data) {
+  const vals  = Object.values(data);
+  const res   = vals.filter(v=>v?.status==='reserved').length;
+  const conf  = vals.filter(v=>v?.status==='confirmed').length;
+  const free  = 100 - res - conf;
+  const occ   = res + conf;
+  el('cFree').textContent = free;
+  el('cRes').textContent  = res;
+  el('cConf').textContent = conf;
+  const pct = Math.round(occ / 100 * 100);
+  el('gFill').style.width = pct + '%';
+  el('gTxt').textContent  = `${occ} de 100 números ocupados (${pct}%)`;
+}
+
+/* ============================================
+   CONFIRMACIÓN PREVIA A LA RESERVA
+   ============================================ */
+let pendingNum = null;
+
+function showConfirm(num) {
+  pendingNum = num;
+  el('cNum').textContent     = num;
+  el('cNumText').textContent = num;
+  el('confirmOverlay').classList.add('open');
+}
+
+function closeConfirm() {
+  el('confirmOverlay').classList.remove('open');
+  pendingNum = null;
+}
+
+function confirmReserve() {
+  if (!pendingNum) return;
+  const num = pendingNum;
+  closeConfirm();
+  tryReserve(num);
+}
+
+/* ============================================
+   RESERVA ATÓMICA (sin colisiones)
+   ============================================ */
+function tryReserve(num) {
+  db.ref(`numbers/${num}`).transaction(current => {
+    // Si está libre (o es null = nunca tocado), reservar
+    if (!current || current.status === 'free') {
+      return { status: 'reserved', reservedAt: firebase.database.ServerValue.TIMESTAMP };
+    }
+    // Si está caducado (>24h), también liberar y reservar
+    if (current.status === 'reserved' && current.reservedAt && (Date.now() - current.reservedAt > HOURS_24)) {
+      return { status: 'reserved', reservedAt: firebase.database.ServerValue.TIMESTAMP };
+    }
+    return; // abortar — ya cogido
+  }, (error, committed) => {
+    if (error) { toast('Error de conexión. Inténtalo de nuevo.'); return; }
+    if (committed) {
+      currentNum = num;
+      showPaymentModal(num);
+      sendNotifications(num);
+    } else {
+      toast(`⚡ El número ${num} acaba de ser cogido. ¡Elige otro!`);
+    }
+  });
+}
+
+/* ============================================
+   MODAL PAGO
+   ============================================ */
+function showPaymentModal(num) {
+  el('mNum').textContent = num;
+  el('mTitle').textContent = `¡Número ${num} reservado para ti!`;
+
+  let instrHtml = `<span class="big">Paso 1: Haz tu donativo solidario de 1€ por Bizum</span>`;
+  if (cfg.bizum) {
+    instrHtml += `Número Bizum: <strong>${cfg.bizum}</strong> <button class="copy-chip" onclick="copyTxt('${cfg.bizum}')">Copiar</button><br>
+    Concepto: <strong>Sorteo ${num}</strong> <button class="copy-chip" onclick="copyTxt('Sorteo ${num}')">Copiar</button>`;
+  }
+  instrHtml += `<br><small style="color:var(--muted);font-size:0.8em;">⚠️ Es un donativo solidario de 1€ — no es un pago comercial</small>`;
+  if (cfg.kofi) {
+    instrHtml += `<br><br>¿Sin Bizum? <a href="${cfg.kofi}" target="_blank" style="color:var(--green);font-weight:700;">Dona 1€ por Ko-fi aquí</a>`;
+  }
+  instrHtml += `<span class="big" style="margin-top:12px;">Paso 2: Manda el comprobante del donativo</span>`;
+  // WhatsApp: usar el número de Bizum/WhatsApp (cfg.bizum), no el campo contact
+  const waDisplay = cfg.bizum || cfg.contact || '';
+  if (waDisplay) instrHtml += `💬 <strong>WhatsApp:</strong> ${waDisplay}<br>`;
+  // Email: campo email público o email de EmailJS
+  const emailDisplay = cfg.emailPub || cfg.ejEmail || '';
+  if (emailDisplay) instrHtml += `📧 <strong>Email:</strong> ${emailDisplay}<br>`;
+  if (!waDisplay && !emailDisplay) instrHtml += `Contacta con la asociación adjuntando la captura e indicando el número <strong>${num}</strong>`;
+
+  el('mInstr').innerHTML = instrHtml;
+  el('numOverlay').classList.add('open');
+}
+
+function closeNum() { el('numOverlay').classList.remove('open'); currentNum = null; }
+
+function sendProofWA() {
+  const num  = currentNum;
+  const senderPhone = (el('senderPhone')?.value || '').trim();
+  const phoneLinea  = senderPhone ? senderPhone : '(no indicado)';
+  const text = `🎟️ SORTEO SOLIDARIO ${cfg.organizer || ''}\nNúmero reservado: ${num}\nMi número de Bizum: ${phoneLinea}\n\nAdjunto captura del donativo solidario de 1€. ¡Gracias por vuestra labor! 🙏`;
+  const phone = (cfg.bizum || '').replace(/\s/g,'');
+  const waNum = phone.startsWith('6') || phone.startsWith('7') ? '34' + phone : phone;
+  window.open(`https://wa.me/${waNum}?text=${encodeURIComponent(text)}`, '_blank');
+}
+
+function sendProofEmail() {
+  const num = currentNum;
+  // Orden de preferencia: email público del wizard → email de EmailJS → nada
+  const destEmail = (cfg.emailPub || cfg.ejEmail || '').trim();
+  if (!destEmail || !destEmail.includes('@')) {
+    toast('ℹ️ No hay email de contacto configurado. Usa WhatsApp o envía la captura directamente.');
+    return;
+  }
+  const senderPhone2 = (el('senderPhone')?.value || '').trim();
+  const phoneLinea2  = senderPhone2 ? senderPhone2 : '(no indicado)';
+  const subj = encodeURIComponent(`Sorteo solidario nº${num} — Comprobante de donativo`);
+  const body = encodeURIComponent(
+    `Hola,\n\nNúmero reservado: ${num}\nMi número de Bizum: ${phoneLinea2}\n\nAdjunto la captura del donativo solidario de 1€.\n\n¡Gracias por vuestra labor! 🙏`
+  );
+  // window.location.href abre el cliente de correo sin ser bloqueado como popup
+  window.location.href = `mailto:${destEmail}?subject=${subj}&body=${body}`;
+}
+
+/* ============================================
+   NOTIFICACIONES
+   ============================================ */
+function sendNotifications(num) {
+  const msg = `🎟️ RESERVA NUEVA\nNúmero ${num} reservado en el sorteo.\nComprueba tu Bizum para confirmar el pago.\n⏱️ Se liberará en 24h si no confirmas.`;
+  sendWA(msg);
+  sendEmail(`🎟️ Sorteo: Número ${num} reservado`, msg);
+}
+
+function sendWA(msg) {
+  if (!cfg.waKey || !cfg.waPhone) return;
+  const url = `https://api.callmebot.com/whatsapp.php?phone=${cfg.waPhone}&text=${encodeURIComponent(msg)}&apikey=${cfg.waKey}`;
+  fetch(url).catch(() => {});
+}
+
+function sendEmail(subject, msg) {
+  if (!cfg.ejKey || !cfg.ejSvc || !cfg.ejTpl || !cfg.ejEmail) return;
+  emailjs.send(cfg.ejSvc, cfg.ejTpl, { to_email: cfg.ejEmail, subject, message: msg }).catch(() => {});
+}
+
+/* ============================================
+   ADMIN
+   ============================================ */
+function openAdm() {
+  el('aLogin').style.display  = 'block';
+  el('aPanel').style.display  = 'none';
+  el('aPwd').value = '';
+  el('aLoginErr').style.display = 'none';
+  el('admOverlay').classList.add('open');
+}
+function closeAdm() { el('admOverlay').classList.remove('open'); }
+
+function checkPwd() {
+  if (el('aPwd').value === cfg.password) {
+    el('aLogin').style.display = 'none';
+    el('aPanel').style.display = 'block';
+    aTab('grid');
+    // Fetch current data for admin grid
+    db.ref('numbers').get().then(snap => renderAdminGrid(snap.val() || {}));
+    renderParticipants();
+  } else {
+    el('aLoginErr').style.display = 'block';
+  }
+}
+
+function aTab(tab) {
+  ['grid','parts','once'].forEach(t => el(`at-${t}`).style.display = t===tab?'block':'none');
+  document.querySelectorAll('.atab').forEach((b,i) => b.classList.toggle('active', ['grid','parts','once'][i]===tab));
+  if (tab === 'parts') { populateNumSelects(); renderParticipants(); }
+}
+
+function renderAdminGrid(data) {
+  const g = el('aGrid'); g.innerHTML = '';
+  for (let i = 0; i <= 99; i++) {
+    const key = String(i).padStart(2, '0');
+    const s  = data[key]?.status || 'free';
+    const d  = document.createElement('div');
+    d.className   = `ag ${s}`;
+    d.textContent = key;
+    d.title       = `#${key}: ${s}`;
+    d.onclick     = () => cycleAdm(key);
+    g.appendChild(d);
+  }
+}
+
+function cycleAdm(num) {
+  db.ref(`numbers/${num}`).get().then(snap => {
+    const cur  = snap.val()?.status || 'free';
+    const next = cur === 'free' ? 'reserved' : cur === 'reserved' ? 'confirmed' : 'free';
+    const update = next === 'free'
+      ? { status: 'free' }
+      : next === 'reserved'
+        ? { status: 'reserved', reservedAt: firebase.database.ServerValue.TIMESTAMP }
+        : { ...(snap.val()||{}), status: 'confirmed', confirmedAt: firebase.database.ServerValue.TIMESTAMP };
+    db.ref(`numbers/${num}`).set(update);
+  });
+}
+
+function renderParticipants() {
+  db.ref('numbers').get().then(snap => {
+    const data = snap.val() || {};
+    const confirmed = Object.entries(data)
+      .filter(([,v]) => v?.status === 'confirmed')
+      .sort(([a],[b]) => a.localeCompare(b));
+    const list = el('pList');
+    if (!confirmed.length) {
+      list.innerHTML = '<p style="font-size:0.8rem;color:var(--muted);text-align:center;padding:16px 0;">Aún no hay pagos confirmados</p>';
+      return;
+    }
+    list.innerHTML = confirmed.map(([num, v]) => {
+      const who    = v.name ? v.name : (v.phone && v.phone !== '—' ? v.phone : 'Sin datos');
+      const method = v.payMethod === 'efectivo'
+        ? '<span style="color:#3D7A4F;font-size:0.68rem;font-weight:700;">💵 Efectivo</span>'
+        : '<span style="color:#E67E22;font-size:0.68rem;font-weight:700;">📱 Bizum</span>';
+      const date   = v.confirmedAt ? new Date(v.confirmedAt).toLocaleString('es-ES') : '—';
+      return `<div class="pitem">
+        <div>
+          <strong>${who}</strong> ${method}<br>
+          <span style="color:var(--muted);font-size:0.7rem;">${date}</span>
+        </div>
+        <span class="pnum">${num}</span>
+      </div>`;
+    }).join('');
+  });
+}
+
+/* Rellena los selects con todos los números (00-99) para huérfanos,
+   y solo los libres/reservados para efectivo */
+function populateNumSelects() {
+  return db.ref('numbers').get().then(snap => {
+    const data = snap.val() || {};
+
+    // Select huérfano: todos los números
+    const orphSel = el('orphanNum');
+    if (orphSel) {
+      orphSel.innerHTML = '<option value="">-- Selecciona número --</option>';
+      for (let i = 0; i <= 99; i++) {
+        const k = String(i).padStart(2,'0');
+        const s = data[k]?.status || 'free';
+        const label = s === 'free' ? `${k} — libre` : s === 'reserved' ? `${k} — reservado` : `${k} — ya confirmado`;
+        orphSel.innerHTML += `<option value="${k}">${label}</option>`;
+      }
+    }
+
+    // Select efectivo: números libres + reservados por efectivo (pendientes de cobrar)
+    const cashSel = el('cashNum');
+    if (cashSel) {
+      const prev = cashSel.value; // conservar selección actual si existe
+      cashSel.innerHTML = '<option value="">-- Selecciona número --</option>';
+      for (let i = 0; i <= 99; i++) {
+        const k = String(i).padStart(2,'0');
+        const entry = data[k];
+        const s = entry?.status || 'free';
+        if (s === 'free') {
+          cashSel.innerHTML += `<option value="${k}">${k} — libre</option>`;
+        } else if (s === 'reserved' && entry?.payMethod === 'efectivo') {
+          cashSel.innerHTML += `<option value="${k}">${k} — reservado en mano (${entry.name || '?'})</option>`;
+        }
+      }
+      if (prev) cashSel.value = prev; // restaurar selección
+    }
+  });
+}
+
+function reserveCash() {
+  const num  = el('cashNum').value;
+  const name = el('cashName').value.trim();
+  if (!num)  { toast('Selecciona un número'); return; }
+  if (!name) { toast('Introduce el nombre de la persona'); return; }
+  db.ref(`numbers/${num}`).transaction(current => {
+    if (current && current.status !== 'free') return; // abortar si ya cogido
+    return {
+      status: 'reserved',
+      name,
+      phone: el('cashPhone').value.trim() || '—',
+      payMethod: 'efectivo',
+      reservedAt: firebase.database.ServerValue.TIMESTAMP
+    };
+  }, (err, committed) => {
+    if (committed) {
+      toast(`🔒 Número ${num} reservado para ${name} — ahora cobra el euro y pulsa "Confirmar cobro"`);
+      populateNumSelects().then(() => {
+        // Mantener el número seleccionado para confirmar inmediatamente
+        el('cashNum').value = num;
+      });
+      renderParticipants();
+    } else {
+      toast(`⚡ El número ${num} ya no estaba libre. Elige otro.`);
+      populateNumSelects();
+    }
+  });
+}
+
+function registerCash() {
+  const num   = el('cashNum').value;
+  const name  = el('cashName').value.trim();
+  const phone = el('cashPhone').value.trim();
+  if (!num)  { toast('Selecciona un número'); return; }
+  if (!name) { toast('Introduce el nombre de la persona'); return; }
+  db.ref(`numbers/${num}`).transaction(current => {
+    // Confirmar si está libre O reservado (puede que lo hayas reservado justo antes)
+    if (current && current.status === 'confirmed') return; // abortar si ya confirmado
+    return {
+      status: 'confirmed',
+      name,
+      phone: phone || (current?.phone) || '—',
+      payMethod: 'efectivo',
+      reservedAt: current?.reservedAt || firebase.database.ServerValue.TIMESTAMP,
+      confirmedAt: firebase.database.ServerValue.TIMESTAMP
+    };
+  }, (err, committed) => {
+    if (committed) {
+      toast(`✅ Número ${num} confirmado para ${name} — pago en efectivo registrado`);
+      el('cashNum').value   = '';
+      el('cashName').value  = '';
+      el('cashPhone').value = '';
+      populateNumSelects();
+      renderParticipants();
+    } else {
+      toast(`⚠️ El número ${num} ya estaba confirmado por otra persona.`);
+      populateNumSelects();
+    }
+  });
+}
+
+function assignOrphan() {
+  const num   = el('orphanNum').value;
+  const phone = el('orphanPhone').value.trim();
+  if (!num || !phone) { toast('Selecciona un número e introduce el teléfono'); return; }
+  db.ref(`numbers/${num}`).set({
+    status: 'confirmed',
+    phone,
+    payMethod: 'bizum',
+    reservedAt: Date.now(),
+    confirmedAt: firebase.database.ServerValue.TIMESTAMP
+  }).then(() => {
+    toast(`✅ Número ${num} confirmado`);
+    el('orphanNum').value  = '';
+    el('orphanPhone').value = '';
+    populateNumSelects();
+    renderParticipants();
+  });
+}
+
+function resetGrid() {
+  if (!confirm('⚠️ ¿Seguro que quieres borrar TODOS los números del cuadrante? Esta acción no se puede deshacer.')) return;
+  db.ref('numbers').remove().then(() => toast('✅ Cuadrante limpiado. Todos los números están libres.'));
+}
+
+function exportData() {
+  db.ref('numbers').get().then(snap => {
+    const blob = new Blob([JSON.stringify({ cfg, numbers: snap.val(), exported: new Date().toISOString() }, null, 2)], { type: 'application/json' });
+    dlBlob(blob, `sorteo_backup_${today()}.json`);
+  });
+}
+
+function exportCSV() {
+  db.ref('numbers').get().then(snap => {
+    const data = snap.val() || {};
+    const rows = Object.entries(data)
+      .filter(([,v]) => v?.status === 'confirmed')
+      .map(([num, v]) => [num, v.phone || '—', v.confirmedAt ? new Date(v.confirmedAt).toLocaleString('es-ES') : '—']);
+    if (!rows.length) { toast('Aún no hay pagos confirmados'); return; }
+    const csv = [['Número','Teléfono','Fecha confirmación'], ...rows]
+      .map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    dlBlob(new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'}), `participantes_${today()}.csv`);
+  });
+}
+
+/* ============================================
+   ONCE / GANADORES
+   ============================================ */
+function revealWinners() {
+  const raw = el('onceIn').value.trim();
+  if (!/^\d{5}$/.test(raw)) { toast('Introduce exactamente 5 dígitos'); return; }
+
+  // Premio 1 (derecha): 2 últimas cifras del número ONCE → coincide con números que terminen en esos 2 dígitos
+  // Premio 2 (izquierda): 2 primeras cifras del número ONCE → coincide con números que empiecen por esos 2 dígitos
+  const rightTwo = raw.slice(3, 5); // últimas 2 cifras
+  const leftTwo  = raw.slice(0, 2); // primeras 2 cifras
+
+  el('onceDisp').textContent = raw;
+  el('onceRes').style.display = 'block';
+
+  db.ref('numbers').get().then(snap => {
+    const data = snap.val() || {};
+    const confirmed = Object.entries(data).filter(([,v])=>v?.status==='confirmed');
+
+    // Las claves ya son "00"–"99", comparación directa
+    const w1 = confirmed.filter(([n]) => n === rightTwo);
+    const w2 = confirmed.filter(([n]) => n === leftTwo);
+
+    const p1 = cfg.prizes?.[0]?.name || 'Premio 1';
+    const p2 = cfg.prizes?.[1]?.name || 'Premio 2';
+
+    const wHTML = `
+      <p><strong>${p1} (cifras ${rightTwo}):</strong> ${w1.length ? w1.map(([n,v])=>`🎊 Número <strong>${n}</strong>${v.phone?' · '+v.phone:''}`).join(', ') : `Número/s con terminación ${rightTwo} — no confirmado/s aún`}</p>
+      <p style="margin-top:6px;"><strong>${p2} (cifras ${leftTwo}):</strong> ${w2.length ? w2.map(([n,v])=>`🎊 Número <strong>${n}</strong>${v.phone?' · '+v.phone:''}`).join(', ') : `Número/s con inicio ${leftTwo} — no confirmado/s aún`}</p>`;
+    el('onceWins').innerHTML = wHTML;
+    showWinnerOverlay(raw, rightTwo, leftTwo, p1, p2, w1, w2);
+  });
+}
+
+function showWinnerOverlay(numStr, right, left, p1, p2, w1, w2) {
+  el('wNum').textContent = numStr;
+  el('wDig').textContent = `Premios: cifras ${right} (derecha) y ${left} (izquierda)`;
+  el('wPrs').innerHTML   = `
+    <p class="wn-pr">🥇 <strong>${p1}:</strong> números terminados en <strong>${right}</strong></p>
+    <p class="wn-pr">🥈 <strong>${p2}:</strong> números que empiezan por <strong>${left}</strong></p>`;
+  el('winOverlay').classList.add('show');
+  el('confetti').classList.add('show');
+  launchConfetti();
+}
+
+function closeWinner() {
+  el('winOverlay').classList.remove('show');
+  el('confetti').classList.remove('show');
+}
+
+/* ============================================
+   CAROUSEL
+   ============================================ */
+function renderCarousel() {
+  const track = el('crTrack');
+  const dots  = el('crDots');
+  track.innerHTML = dots.innerHTML = '';
+  carouselIdx = 0;
+  const prizes = (cfg.prizes || []).filter(p=>p.name);
+  prizes.forEach((p, i) => {
+    const sideLabel = p.side === 'right' ? '➡️ Dos últimas cifras' : '⬅️ Dos primeras cifras';
+    const img = p.img ? `<img src="${p.img}" alt="${p.name}" onerror="this.parentElement.innerHTML='<span class=\\'pe\\'>🏆</span>'">` : `<span class="pe">🏆</span>`;
+    track.innerHTML += `<div class="pr-slide"><div class="pr-ring">${img}</div><p class="pr-side">${sideLabel}</p><p class="pr-name">${p.name}</p>${p.desc?`<p class="pr-desc">${p.desc}</p>`:''} ${p.donor?`<p class="pr-donor">Donado por: ${p.donor}</p>`:''}</div>`;
+    dots.innerHTML  += `<div class="cdot${i===0?' active':''}" onclick="goSlide(${i})"></div>`;
+  });
+}
+
+function goSlide(i) {
+  const n = (cfg.prizes||[]).filter(p=>p.name).length;
+  if (!n) return;
+  carouselIdx = ((i%n)+n)%n;
+  el('crTrack').style.transform = `translateX(-${carouselIdx*100}%)`;
+  document.querySelectorAll('.cdot').forEach((d,j)=>d.classList.toggle('active',j===carouselIdx));
+}
+
+function startCarousel() {
+  if (carouselTimer) clearInterval(carouselTimer);
+  carouselTimer = setInterval(()=>goSlide(carouselIdx+1), 4000);
+}
+
+/* ============================================
+   CONFETTI
+   ============================================ */
+function launchConfetti() {
+  const cv = el('confetti'), ctx = cv.getContext('2d');
+  cv.width = innerWidth; cv.height = innerHeight;
+  const cols = ['#C9952A','#3D7A4F','#C0392B','#3498DB','#F39C12'];
+  const ps = Array.from({length:120},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height-cv.height,r:Math.random()*6+3,c:cols[Math.floor(Math.random()*cols.length)],tilt:Math.random()*12-6,sp:Math.random()*2.5+1.2,w:Math.random()*Math.PI*2}));
+  function tick() {
+    if (!el('confetti').classList.contains('show')) return;
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ps.forEach(p=>{p.w+=0.05;p.y+=p.sp;p.tilt=Math.sin(p.w)*12;if(p.y>cv.height){p.y=-10;p.x=Math.random()*cv.width;}ctx.beginPath();ctx.fillStyle=p.c;ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+p.tilt+p.r,p.y+p.r*2);ctx.lineTo(p.x+p.tilt,p.y+p.r*3);ctx.lineTo(p.x-p.r,p.y+p.r*2);ctx.closePath();ctx.fill();});
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+/* ============================================
+   SHARE
+   ============================================ */
+function shareWA() {
+  const isLocal = location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  const url  = isLocal ? '⚠️ (publica la web para obtener el enlace real)' : location.href;
+  const text = `🎟️ ${cfg.title||'Sorteo Solidario'}\n¡Participa con solo 1€ de donativo solidario!\n${cfg.cause?'🎯 '+cfg.cause+'\n':''}👉 ${url}`;
+  if (isLocal) { toast('⚠️ WhatsApp compartirá sin enlace hasta que publiques en Netlify. El mensaje se abrirá igual.'); }
+  open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+}
+function shareFB() {
+  if (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    toast('⚠️ Facebook solo funciona con la web publicada en internet. Despliega primero en Netlify.');
+    return;
+  }
+  open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(location.href)}`, '_blank');
+}
+function copyLink() {
+  if (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    toast('⚠️ Aún no tienes URL pública. Despliega en Netlify para obtenerla.');
+    return;
+  }
+  navigator.clipboard.writeText(location.href).then(()=>toast('🔗 ¡Enlace copiado!')).catch(()=>prompt('Copia este enlace:',location.href));
+}
+
+/* ============================================
+   UTILS
+   ============================================ */
+function el(id)  { return document.getElementById(id); }
+function v(id)   { return (el(id)?.value||'').trim(); }
+function showEl(id,d) { el(id).style.display=d; }
+function hideAll() {
+  ['fbSetup','wizard','app'].forEach(id=>el(id).style.display='none');
+}
+function toast(msg, dur=2800) {
+  const t=el('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), dur);
+}
+function copyTxt(txt) { navigator.clipboard.writeText(txt).then(()=>toast('¡Copiado!')).catch(()=>{}); }
+function dlBlob(blob, name) {
+  const url=URL.createObjectURL(blob), a=Object.assign(document.createElement('a'),{href:url,download:name});
+  a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function today() { return new Date().toLocaleDateString('es-ES').replace(/\//g,'_'); }
+
+/* Cerrar overlays al hacer clic fuera */
+['numOverlay','admOverlay','confirmOverlay'].forEach(id=>{
+  el(id).addEventListener('click',function(e){
+    if(e.target===this){
+      if(id==='numOverlay') closeNum();
+      else if(id==='admOverlay') closeAdm();
+      else if(id==='confirmOverlay') closeConfirm();
+    }
+  });
+});
+</script>
+</body>
+</html>
