@@ -12,6 +12,7 @@
 <!-- Firebase SDK (tiempo real) -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
 <!-- EmailJS (notificaciones por email) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
@@ -140,13 +141,14 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .cr { position: relative; overflow: hidden; }
 .cr-track { display: flex; transition: transform 0.55s cubic-bezier(0.4,0,0.2,1); }
 .pr-slide { min-width: 100%; padding: 0 28px 4px; text-align: center; }
-.pr-ring  { width: 110px; height: 110px; border-radius: 50%; border: 3px solid var(--gold); overflow: hidden; margin: 0 auto 12px; background: var(--green-light); display: flex; align-items: center; justify-content: center; }
-.pr-ring img { width: 100%; height: 100%; object-fit: cover; }
-.pr-ring .pe { font-size: 2.8rem; }
+.pr-ring  { width: 240px; height: 240px; border-radius: 12px; border: none; overflow: hidden; margin: 0 auto 16px; background: transparent; display: flex; align-items: center; justify-content: center; transition: transform 0.3s ease; }
+.pr-ring:hover { transform: scale(1.05); }
+.pr-ring img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 12px 20px rgba(0,0,0,0.25)); }
+.pr-ring .pe { font-size: 5rem; }
 .pr-side  { font-size: 0.65rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--green); margin-bottom: 3px; }
 .pr-name  { font-size: 1.05rem; font-weight: 800; margin-bottom: 4px; }
 .pr-desc  { font-size: 0.78rem; color: var(--muted); margin-bottom: 5px; max-width: 280px; margin-left: auto; margin-right: auto; line-height: 1.4; }
-.pr-donor { font-size: 0.73rem; color: var(--gold); font-weight: 600; }
+.pr-donor { font-size: 1.05rem; color: var(--gold); font-weight: 800; margin-top: 5px; }
 .cr-dots  { display: flex; justify-content: center; gap: 7px; margin-top: 14px; padding-bottom: 6px; }
 .cdot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); cursor: pointer; transition: all 0.2s; }
 .cdot.active { background: var(--green); transform: scale(1.25); }
@@ -179,7 +181,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .ld-r   { background: var(--orange); }
 .ld-c   { background: var(--border); }
 .num-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
-.nb { aspect-ratio: 1; border-radius: 6px; border: none; cursor: pointer; font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.14s; touch-action: manipulation; }
+.nb { aspect-ratio: 1; border-radius: 6px; border: none; cursor: pointer; font-size: 0.90rem; font-weight: 800; display: flex; align-items: center; justify-content: center; transition: all 0.14s; touch-action: manipulation; }
 .nb:active { transform: scale(0.88); }
 .nb.free     { background: var(--green); color: white; }
 .nb.free:hover { background: var(--green-dark); transform: scale(1.1); z-index: 1; }
@@ -217,6 +219,12 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .af-links { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
 .af-link  { color: var(--gold); font-size: 0.75rem; cursor: pointer; }
 .af-link:hover { opacity: 0.75; }
+.af-made { margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.af-made-copy { font-size: 0.68rem; color: rgba(255,255,255,0.4); letter-spacing: 0.3px; }
+.xeia-inline { display: inline-flex; align-items: baseline; gap: 1px; line-height: 1; }
+.xeia-xe { font-family: Montserrat, Arial, sans-serif; font-weight: 800; font-size: 0.95rem; color: #97D700; }
+.xeia-ia { font-family: Montserrat, Arial, sans-serif; font-weight: 800; font-size: 0.95rem; color: #FF6A13; }
+.xeia-bt { font-family: Georgia, serif; font-weight: 600; font-size: 0.75rem; color: rgba(255,255,255,0.75); margin-left: 4px; letter-spacing: 0.5px; }
 
 /* ============================
    MODALS
@@ -290,6 +298,21 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 
 @media (min-width: 400px) { .nb { font-size: 0.82rem; } }
 @media (min-width: 520px) { .modal { border-radius: 22px; } .overlay { align-items: center; } #admOverlay .modal { border-radius: 16px; } }
+
+/* ============================
+   CARRITO / MULTI-SELECCIÓN
+   ============================ */
+.nb.selected { background: #4A90E2 !important; color: white !important; box-shadow: 0 0 0 2.5px #1a6fd4, 0 0 10px rgba(74,144,226,0.55) !important; transform: scale(1.12); z-index: 2; }
+.basket-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--green-dark); padding: 12px 18px 20px; display: flex; align-items: center; justify-content: space-between; z-index: 450; transform: translateY(110%); transition: transform 0.32s cubic-bezier(0.4,0,0.2,1); box-shadow: 0 -4px 24px rgba(0,0,0,0.35); border-top: 2px solid var(--gold); }
+.basket-bar.open { transform: translateY(0); }
+.basket-info { color: white; }
+.basket-count { font-size: 1rem; font-weight: 800; }
+.basket-eur   { font-size: 0.82rem; color: var(--gold); font-weight: 700; margin-top: 1px; }
+.basket-btns  { display: flex; gap: 8px; align-items: center; }
+.b-clear { background: rgba(255,255,255,0.14); color: white; border: none; border-radius: 20px; padding: 8px 13px; cursor: pointer; font-size: 0.8rem; font-weight: 600; }
+.b-buy   { background: var(--gold); color: var(--text); border: none; border-radius: 20px; padding: 11px 20px; cursor: pointer; font-size: 0.9rem; font-weight: 800; white-space: nowrap; }
+.sel-chip { display: inline-block; background: var(--green); color: white; border-radius: 20px; padding: 4px 10px; font-size: 0.9rem; font-weight: 800; margin: 3px; }
+
 </style>
 </head>
 <body>
@@ -358,7 +381,17 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
         <div class="fg"><label>Nombre del premio</label><input id="p1n" type="text" placeholder="Ej: Sexto de esparto artesanal"></div>
         <div class="fg"><label>Descripción</label><input id="p1d" type="text" placeholder="Ej: Cesta tejida a mano con esparto natural"></div>
         <div class="fg"><label>Donado por</label><input id="p1do" type="text" placeholder="Ej: Taller Esparto Vivo"></div>
-        <div class="fg"><label>URL de foto (opcional)</label><input id="p1i" type="url" placeholder="https://…/foto.jpg"></div>
+        <div class="fg">
+          <label>Foto del Premio 1</label>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input id="p1i" type="url" placeholder="https://…/foto.jpg" style="flex:1;min-width:160px;">
+            <label style="cursor:pointer;background:var(--green);color:white;padding:7px 12px;border-radius:8px;font-size:0.78rem;font-weight:700;white-space:nowrap;">
+              📷 Subir foto
+              <input type="file" accept="image/*" style="display:none;" onchange="uploadPrizeImg(this,'p1i','premio1')">
+            </label>
+          </div>
+          <p class="fh" id="p1i-status"></p>
+        </div>
       </div>
 
       <div class="prize-block">
@@ -366,7 +399,17 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
         <div class="fg"><label>Nombre del premio</label><input id="p2n" type="text" placeholder="Ej: Capacha mini de esparto"></div>
         <div class="fg"><label>Descripción</label><input id="p2d" type="text" placeholder="Ej: Bolso mini artesanal de esparto"></div>
         <div class="fg"><label>Donado por</label><input id="p2do" type="text" placeholder="Ej: Artesana Carmen López"></div>
-        <div class="fg"><label>URL de foto (opcional)</label><input id="p2i" type="url" placeholder="https://…/foto.jpg"></div>
+        <div class="fg">
+          <label>Foto del Premio 2</label>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input id="p2i" type="url" placeholder="https://…/foto.jpg" style="flex:1;min-width:160px;">
+            <label style="cursor:pointer;background:var(--green);color:white;padding:7px 12px;border-radius:8px;font-size:0.78rem;font-weight:700;white-space:nowrap;">
+              📷 Subir foto
+              <input type="file" accept="image/*" style="display:none;" onchange="uploadPrizeImg(this,'p2i','premio2')">
+            </label>
+          </div>
+          <p class="fh" id="p2i-status"></p>
+        </div>
       </div>
     </div>
 
@@ -448,7 +491,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
     <p class="ah-org" id="aOrg">—</p>
     <h1 class="ah-tit" id="aTit">Sorteo Solidario</h1>
     <p class="ah-cau" id="aCau"></p>
-    <div class="ah-badge">🎟️ Donativo solidario de 1€ por número</div>
+    <div class="ah-badge">🎟️ 1€ por número · Elige los que quieras</div>
     <div class="ah-ctrs">
       <div class="ah-ctr"><span class="ah-ctr-n" id="cFree">99</span>libres</div>
       <div class="ah-ctr"><span class="ah-ctr-n" id="cRes">0</span>pendientes</div>
@@ -460,6 +503,9 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
     <p class="pw-lbl">🏆 Premios del sorteo</p>
     <div class="cr"><div class="cr-track" id="crTrack"></div></div>
     <div class="cr-dots" id="crDots"></div>
+    <p style="text-align:center;font-size:0.72rem;color:var(--muted);margin-top:10px;">
+      📍 <strong>Recogida del premio en Humilladero (Málaga)</strong> · Envio a otra localidad posible, a cargo del ganador
+    </p>
   </div>
 
   <div class="dk">
@@ -471,7 +517,8 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 
   <div class="cta">
     <h2>¡Elige tu número de la suerte! 🍀</h2>
-    <p>Reserva un número libre, haz un <strong>donativo solidario de 1€ por Bizum</strong> y espera al sorteo. ¡Cuadrante en tiempo real!</p>
+    <p>Cada número vale <strong>1€ de donativo solidario</strong>. Puedes elegir <strong>tantos números como quieras</strong> — más números, más posibilidades de ganar y más ayuda a la causa. Cuadrante en tiempo real.</p>
+    <p style="font-size:0.82rem;color:var(--muted);margin-top:6px;">Toca uno o varios números verdes → aparece una barra abajo → paga de golpe con un solo Bizum.</p>
     <button class="cta-btn" onclick="document.getElementById('gridAnchor').scrollIntoView({behavior:'smooth'})">Ver el cuadrante ↓</button>
   </div>
 
@@ -481,20 +528,26 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
       <p class="g-txt" id="gTxt">0 de 100 números ocupados</p>
     </div>
     <div class="g-leg">
-      <div class="leg"><div class="ld ld-f"></div>Libre</div>
-      <div class="leg"><div class="ld ld-r"></div>Reservado (24h)</div>
+      <div class="leg"><div class="ld ld-f"></div>Libre (1€)</div>
+      <div class="leg"><div class="ld" style="background:#4A90E2;"></div>Seleccionado</div>
+      <div class="leg"><div class="ld ld-r"></div>Reservado</div>
       <div class="leg"><div class="ld ld-c"></div>Confirmado</div>
     </div>
+    <p style="text-align:center;font-size:0.75rem;color:var(--muted);margin-bottom:10px;">Toca varios números para añadirlos al carrito y pagar de una vez 🛒</p>
     <div class="num-grid" id="numGrid"></div>
   </div>
 
   <div class="howto">
     <h2>¿Cómo participar?</h2>
     <div class="steps">
-      <div class="step"><div class="sn">1</div><div class="st"><h4>Elige un número libre</h4><p>Toca cualquier número verde — se reserva al instante para todo el mundo</p></div></div>
-      <div class="step"><div class="sn">2</div><div class="st"><h4>Haz tu donativo de 1€ por Bizum</h4><p id="ht-pay">Envía un donativo de 1€ al número de Bizum indicando en el CONCEPTO el número que has elegido</p></div></div>
-      <div class="step"><div class="sn">3</div><div class="st"><h4>Manda el comprobante</h4><p id="ht-contact">Envíanos la captura del donativo por WhatsApp o email — te confirmamos la reserva al momento</p></div></div>
-      <div class="step"><div class="sn">4</div><div class="st"><h4>¡Espera al sorteo!</h4><p>Cuando el cuadrante se llene usamos el número de la ONCE para elegir a los 2 ganadores</p></div></div>
+      <div class="step"><div class="sn">1</div><div class="st"><h4>Toca los números que quieras</h4><p>Cada número verde vale <strong>1€</strong>. Toca uno o varios — se marcan en azul y se añaden a tu carrito automáticamente.</p></div></div>
+      <div class="step"><div class="sn">2</div><div class="st"><h4>Haz un único Bizum</h4><p id="ht-pay">Cuando tengas todos tus números, pulsa "🛒 Reservar" en la barra de abajo y haz <strong>un solo Bizum</strong> por el total (ej. 3 números = 3€).</p></div></div>
+      <div class="step"><div class="sn">3</div><div class="st"><h4>Manda el comprobante</h4><p id="ht-contact">Envíanos la captura del Bizum por WhatsApp — te confirmamos todos los números de golpe.</p></div></div>
+      <div class="step"><div class="sn">4</div><div class="st"><h4>¡Espera al sorteo!</h4><p>Cuando el cuadrante se llene usamos el número de la ONCE para elegir a los 2 ganadores. Más números = más posibilidades.</p></div></div>
+    </div>
+    <div style="margin-top:14px;padding:10px 14px;background:#f0f7f4;border-radius:10px;border-left:3px solid var(--green);font-size:0.78rem;color:var(--muted);line-height:1.6;">
+      <strong>📍 Entrega del premio:</strong> La recogida se realiza en el local de la asociación en <strong>Humilladero (Málaga)</strong>.
+      Si no puedes desplazarte, el envío es posible previa coordinación, pero <strong>los gastos de envío corren por cuenta del ganador</strong>.
     </div>
   </div>
 
@@ -508,14 +561,16 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   </div>
 
   <footer class="af">
-    <div style="background:rgba(255,255,255,0.94);border-radius:12px;padding:10px 18px;display:inline-block;margin-bottom:10px;">
-      <img src="esparto-vivo-logo.jpeg" alt="Esparto Vivo" style="width:160px;height:auto;display:block;">
-    </div>
     <img id="fLogo" class="af-logo" src="" alt="Logo" onerror="this.style.display='none'">
     <p class="af-org" id="fOrg">—</p>
     <p class="af-cau" id="fCau">Sorteo sin ánimo de lucro · Recaudación de fondos</p>
-    <div class="af-links">
-      <span class="af-link" onclick="openAdm()">🔐 Administrador</span>
+    <!-- Créditos XeIA Boutique -->
+    <div class="af-made">
+      <span class="af-made-copy">© 2026 · Desarrollado por</span>
+      <span class="xeia-inline">
+        <span class="xeia-xe">Xe</span><span class="xeia-ia">IA</span><span class="xeia-bt">Boutique</span>
+      </span>
+      <span class="af-made-copy">· Todos los derechos reservados <span style="margin:0 6px;">|</span> <span onclick="openAdm()" style="cursor:pointer; opacity:0.8; transition:opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">🔐 Admin</span></span>
     </div>
   </footer>
 </div>
@@ -592,6 +647,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
         <button class="atab active" onclick="aTab('grid')">Cuadrante</button>
         <button class="atab" onclick="aTab('parts')">Pagos</button>
         <button class="atab" onclick="aTab('once')">ONCE</button>
+        <button class="atab" onclick="aTab('manual')">📖 Manual</button>
       </div>
 
       <!-- Cuadrante admin -->
@@ -661,6 +717,60 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
           <div class="once-wins" id="onceWins"></div>
         </div>
       </div>
+
+      <!-- MANUAL DE ADMINISTRADOR -->
+      <div id="at-manual" style="display:none;">
+        <p class="a-section-title">📖 Manual del Administrador</p>
+        <div style="font-size:0.8rem;line-height:1.7;color:var(--text);">
+
+          <p style="background:#e8f5ee;border-left:3px solid var(--green);padding:8px 10px;border-radius:4px;margin-bottom:12px;">
+            <strong>Sorteo Solidario · Esparto Vivo</strong><br>
+            App web en tiempo real vinculada al cupón de la ONCE.
+          </p>
+
+          <p><strong>⚙️ Configuración</strong></p>
+          <ul style="margin:0 0 10px 16px;">
+            <li>El asistente (wizard) guía la configuración inicial: título, causa, premios, formas de pago.</li>
+            <li>Edita en cualquier momento con <em>⚙️ Editar configuración</em>.</li>
+            <li>Las fotos de premios se suben con el botón <strong>📷 Subir foto</strong> — van a Firebase Storage automáticamente.</li>
+          </ul>
+
+          <p><strong>🔢 Cuadrante</strong></p>
+          <ul style="margin:0 0 10px 16px;">
+            <li>🟢 Libre · 🟠 Reservado (pendiente pago) · ⚫ Confirmado (pagado).</li>
+            <li>Toca cualquier número para cambiar su estado manualmente.</li>
+            <li><em>⬇️ Exportar backup</em> guarda un JSON con todos los datos.</li>
+            <li><em>🗑️ Limpiar cuadrante</em> resetea todo (solo para nuevo sorteo).</li>
+          </ul>
+
+          <p><strong>💵 Pagos</strong></p>
+          <ul style="margin:0 0 10px 16px;">
+            <li>Lista todos los confirmados con nombre, teléfono y número.</li>
+            <li><strong>Pago en efectivo</strong>: reserva al instante y confirma cuando cobres el euro.</li>
+            <li><strong>Bizum sin concepto</strong>: asigna un pago huérfano usando el teléfono del pagador.</li>
+            <li><em>⬇️ Exportar CSV</em> descarga todos los participantes en hoja de cálculo.</li>
+          </ul>
+
+          <p><strong>🎊 Revelar ganadores (tab ONCE)</strong></p>
+          <ul style="margin:0 0 10px 16px;">
+            <li>Introduce los 5 dígitos del cupón ONCE del día del sorteo.</li>
+            <li>Sistema calcula: <strong>2 últimas cifras → Premio 1</strong> (derecha) · <strong>2 primeras cifras → Premio 2</strong> (izquierda).</li>
+            <li>Aparece pantalla de celebración con confeti y datos de los ganadores.</li>
+          </ul>
+
+          <p><strong>☁️ Firebase — dónde están los datos</strong></p>
+          <ul style="margin:0 0 10px 16px;">
+            <li>Proyecto: <strong>sorteo-df1b7</strong>. Consola: console.firebase.google.com</li>
+            <li>Realtime Database: reservas, configuración y estados.</li>
+            <li>Storage → carpeta <code>premios/</code>: fotos de los premios.</li>
+          </ul>
+
+          <p style="font-size:0.72rem;color:var(--muted);margin-top:14px;border-top:1px solid var(--border);padding-top:10px;">
+            © 2026 XeIA Boutique · Todos los derechos reservados.
+          </p>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -673,12 +783,53 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
     <div class="wn-num" id="wNum">—</div>
     <p class="wn-dig" id="wDig">—</p>
     <div class="wn-prs" id="wPrs"></div>
+    <p style="font-size:0.72rem;opacity:0.7;margin-bottom:16px;">📍 Premio recogida en Humilladero (Málaga) · Envío a cargo del ganador</p>
     <button id="btnWinClose" onclick="closeWinner()">Cerrar</button>
+  </div>
+</div>
+
+
+<!-- BARRA DE CARRITO FLOTANTE -->
+<div class="basket-bar" id="basketBar">
+  <div class="basket-info">
+    <div class="basket-count" id="bCount">0 números</div>
+    <div class="basket-eur"   id="bEur">0€ de donativo</div>
+  </div>
+  <div class="basket-btns">
+    <button class="b-clear" onclick="clearBasket()">✕ Limpiar</button>
+    <button class="b-buy"   onclick="openBasketCheckout()">🛒 Reservar →</button>
   </div>
 </div>
 
 <!-- Toast -->
 <div id="toast"></div>
+
+<!-- ============================
+     MODAL: CHECKOUT MÚLTIPLE
+     ============================ -->
+<div class="overlay" id="basketOverlay">
+  <div class="modal">
+    <div class="m-handle"></div>
+    <button class="m-x" onclick="closeBasket()">✕</button>
+    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:6px;">🛒 Números seleccionados</p>
+    <div id="bChips" style="margin-bottom:10px;line-height:2;"></div>
+    <div id="bTotalLabel" style="font-size:1.4rem;font-weight:900;color:var(--green);text-align:center;margin-bottom:14px;"></div>
+    <div class="instr" id="bInstr"></div>
+    <div class="warn-box">⏱️ Tienes <strong>24 horas</strong> para confirmar el pago. Si no, los números quedan libres de nuevo.</div>
+    <div style="margin-top:14px;margin-bottom:6px;">
+      <label style="font-size:0.9rem;font-weight:700;color:var(--text);display:block;margin-bottom:6px;">📱 Tu número de móvil (obligatorio para confirmar tu reserva):</label>
+      <input id="bPhone" type="tel" inputmode="numeric" placeholder="Ej: 600 123 456"
+        style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-size:1rem;background:var(--bg);">
+      <p style="font-size:0.72rem;color:var(--muted);margin-top:4px;">Debe ser un móvil español real (6xx / 7xx). Lo usamos para confirmar el pago contigo.</p>
+    </div>
+    <button class="mbtn mb-green" id="bReserveBtn" style="width:100%;padding:14px;font-size:1rem;margin-top:10px;" onclick="reserveAll()">🎟️ Reservar todos los números</button>
+    <div class="send-proof" id="bProofBtns" style="display:none;margin-top:10px;">
+      <button class="proof-btn proof-wa" onclick="sendBasketProofWA()">📲 Enviar comprobante por WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+
 
 <!-- ============================
      JAVASCRIPT
@@ -895,6 +1046,164 @@ function releaseExpired(data) {
 }
 
 /* ============================================
+   CARRITO MULTI-NÚMERO
+   ============================================ */
+let selectedNums   = new Set();
+let lastReservedNums = []; // persists after basket is cleared, for WhatsApp proof
+
+function toggleSelect(num) {
+  if (selectedNums.has(num)) {
+    selectedNums.delete(num);
+  } else {
+    const maxNums = cfg.maxNums || 10; // configurable by admin, default 10
+    if (selectedNums.size >= maxNums) {
+      toast(`⚠️ Máximo ${maxNums} números por compra. Si necesitas más, contacta directamente.`);
+      return;
+    }
+    selectedNums.add(num);
+  }
+  const btn = document.querySelector(`.nb[data-num="${num}"]`);
+  if (btn) btn.classList.toggle('selected', selectedNums.has(num));
+  updateBasketBar();
+}
+
+function updateBasketBar() {
+  const bar = el('basketBar');
+  const n = selectedNums.size;
+  if (n === 0) { bar.classList.remove('open'); return; }
+  bar.classList.add('open');
+  el('bCount').textContent = n === 1 ? '1 número seleccionado' : `${n} números seleccionados`;
+  el('bEur').textContent   = `${n}€ de donativo solidario`;
+}
+
+function clearBasket() {
+  selectedNums.forEach(num => {
+    const btn = document.querySelector(`.nb[data-num="${num}"]`);
+    if (btn) btn.classList.remove('selected');
+  });
+  selectedNums.clear();
+  updateBasketBar();
+}
+
+function openBasketCheckout() {
+  if (selectedNums.size === 0) return;
+  const nums  = [...selectedNums].sort();
+  const total = nums.length;
+
+  el('bChips').innerHTML      = nums.map(n => `<span class="sel-chip">${n}</span>`).join('');
+  el('bTotalLabel').textContent = `Total: ${total}€`;
+
+  const bizum = cfg.bizum || '';
+  const kofi  = cfg.kofi  || '';
+  const concept = `Sorteo - Números: ${nums.join(', ')}`;
+  let instrHtml = '';
+  if (bizum) {
+    instrHtml += `<span class="big">Bizum de <strong>${total}€</strong> al <strong>${bizum}</strong></span>`;
+    instrHtml += `Concepto: <strong>${concept}</strong> <button class="copy-chip" onclick="copyTxt('${concept}')">Copiar</button>`;
+  }
+  if (kofi) {
+    instrHtml += `<span class="big">Ko-fi: <a href="${kofi}" target="_blank">${kofi}</a></span>`;
+  }
+  instrHtml += `<span style="display:block;margin-top:10px;font-size:0.85rem;color:var(--muted);">Después mándanos la captura por WhatsApp y te confirmamos todos los números.</span>`;
+  el('bInstr').innerHTML = instrHtml;
+
+  el('bPhone').value = '';
+  el('bProofBtns').style.display = 'none';
+  el('bReserveBtn').style.display = 'block';
+  el('basketOverlay').classList.add('open');
+}
+
+function closeBasket() { el('basketOverlay').classList.remove('open'); }
+
+async function reserveAll() {
+  const nums  = [...selectedNums].sort();
+  if (nums.length === 0) return;
+
+  // —— ANTI-ABUSO 1: teléfono móvil español obligatorio ——
+  const phone = (el('bPhone')?.value || '').trim();
+  const digits = phone.replace(/\D/g,'');
+  const isValidMobile = /^[67]\d{8}$/.test(digits); // 6xx o 7xx, 9 dígitos exactos
+  const isSequential  = /^(\d)\1{8}$/.test(digits) || digits === '123456789' || digits === '987654321';
+  if (!isValidMobile || isSequential) {
+    toast('⚠️ Introduce un móvil español válido (empieza por 6 o 7, 9 dígitos).');
+    el('bPhone')?.focus();
+    return;
+  }
+
+  // —— ANTI-ABUSO 2: límite de 24h por dispositivo ——
+  const RL_KEY  = 'srt_rl';
+  const MAX_DAY = cfg.maxNums || 10;
+  const rlData  = JSON.parse(localStorage.getItem(RL_KEY) || '{"count":0,"ts":0}');
+  const dayAgo  = Date.now() - 86400000;
+  const todayCount = rlData.ts > dayAgo ? (rlData.count || 0) : 0;
+  if (todayCount + nums.length > MAX_DAY) {
+    const remaining = Math.max(0, MAX_DAY - todayCount);
+    toast(`⚠️ Has superado el límite de ${MAX_DAY} números por día desde este dispositivo. Puedes reservar ${remaining} más hoy.`);
+    return;
+  }
+
+  const btn = el('bReserveBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Reservando…'; }
+
+  const failed = [];
+  const okNums = [];
+  for (const num of nums) {
+    try {
+      const snap = await db.ref(`numbers/${num}`).get();
+      if ((snap.val()?.status || 'free') !== 'free') { failed.push(num); continue; }
+      await db.ref(`numbers/${num}`).set({
+        status: 'reserved',
+        reservedAt: firebase.database.ServerValue.TIMESTAMP,
+        phone: phone || ''
+      });
+      okNums.push(num);
+      const g = document.querySelector(`.nb[data-num="${num}"]`);
+      if (g) { g.className = 'nb reserved'; g.classList.remove('selected'); g.onclick = null; }
+    } catch(e) { failed.push(num); }
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '🎟️ Reservar todos los números'; }
+
+  if (failed.length) toast(`⚠️ ${failed.length} ya ocupados: ${failed.join(', ')}`);
+  if (okNums.length) {
+    // —— ANTI-ABUSO: registrar reserva en localStorage ——
+    const RL_KEY  = 'srt_rl';
+    const rlNow   = JSON.parse(localStorage.getItem(RL_KEY) || '{"count":0,"ts":0}');
+    const dayAgo  = Date.now() - 86400000;
+    const newCount = (rlNow.ts > dayAgo ? (rlNow.count || 0) : 0) + okNums.length;
+    localStorage.setItem(RL_KEY, JSON.stringify({ count: newCount, ts: Date.now() }));
+    lastReservedNums = [...okNums]; // save before clearing
+    clearBasket();
+    el('bReserveBtn').style.display = 'none';
+    el('bProofBtns').style.display  = 'grid';
+    toast(`✅ ${okNums.length} número${okNums.length>1?'s':''} reservados. ¡Envía el Bizum!`);
+    const msg = `🎟️ RESERVA MÚLTIPLE ${cfg.organizer||''}\nNúmeros: ${okNums.join(', ')}\nTotal: ${okNums.length}€\nTeléfono: ${phone||'(no indicado)'}`;
+    sendWA(msg); sendEmail(`🎟️ Reserva múltiple: ${okNums.join(', ')}`, msg);
+  }
+}
+
+function sendBasketProofWA() {
+  const nums  = lastReservedNums;
+  const total = nums.length;
+  if (!total) { toast('⚠️ No hay números reservados'); return; }
+  const phone   = (el('bPhone')?.value || '').trim();
+  const bizum   = cfg.bizum || '';
+  const concept = `Sorteo - Números: ${nums.join(', ')}`;
+  const text    = [
+    `🎟️ SORTEO SOLIDARIO ${cfg.organizer||''}`,
+    ``,
+    `He reservado ${total} número${total>1?'s': ''}: • ${nums.join(' • ')}`,
+    `Donativo total: •••${total}€•••`,
+    `Concepto Bizum: "${concept}"`,
+    phone ? `Mi Bizum: ${phone}` : '',
+    ``,
+    `Adjunto la captura del donativo solidario. ¡Gracias por vuestra labor! 🙏`
+  ].filter(Boolean).join('\n');
+  const waPhone = bizum.replace(/\s/g,'');
+  const waNum   = waPhone.startsWith('6')||waPhone.startsWith('7') ? '34'+waPhone : waPhone;
+  open(`https://wa.me/${waNum}?text=${encodeURIComponent(text)}`, '_blank');
+}
+
+/* ============================================
    GRID
    ============================================ */
 function renderGrid(data) {
@@ -909,7 +1218,7 @@ function renderGrid(data) {
     btn.textContent = key;
     btn.dataset.num = key;
     btn.title = s === 'free' ? `Número ${key} — libre` : s === 'reserved' ? `Número ${key} — reservado` : `Número ${key} — confirmado`;
-    if (s === 'free') btn.onclick = () => showConfirm(key);
+    if (s === 'free') btn.onclick = () => toggleSelect(key);
     grid.appendChild(btn);
   }
 }
@@ -1083,8 +1392,8 @@ function checkPwd() {
 }
 
 function aTab(tab) {
-  ['grid','parts','once'].forEach(t => el(`at-${t}`).style.display = t===tab?'block':'none');
-  document.querySelectorAll('.atab').forEach((b,i) => b.classList.toggle('active', ['grid','parts','once'][i]===tab));
+  ['grid','parts','once','manual'].forEach(t => el(`at-${t}`).style.display = t===tab?'block':'none');
+  document.querySelectorAll('.atab').forEach((b,i) => b.classList.toggle('active', ['grid','parts','once','manual'][i]===tab));
   if (tab === 'parts') { populateNumSelects(); renderParticipants(); }
 }
 
@@ -1339,6 +1648,54 @@ function closeWinner() {
 /* ============================================
    CAROUSEL
    ============================================ */
+/* ============================================
+   UPLOAD PRIZE IMAGE — Compresión a Base64
+   ============================================ */
+async function uploadPrizeImg(input, fieldId, storagePath) {
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById(fieldId + '-status');
+
+  // Size check
+  if (file.size > 5 * 1024 * 1024) {
+    if (statusEl) statusEl.textContent = '❌ Imagen demasiado grande (máx 5MB).';
+    return;
+  }
+
+  if (statusEl) statusEl.textContent = '⏳ Procesando imagen de forma local…';
+
+  // Helper: compress image via canvas → base64
+  function compressImage(file, maxW, maxH, quality) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+        if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        resolve(cv.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
+  // Use compress + base64 data URL (works instantly without Firebase Storage)
+  try {
+    const dataUrl = await compressImage(file, 800, 800, 0.82);
+    document.getElementById(fieldId).value = dataUrl;
+    if (statusEl) statusEl.textContent = '✅ Imagen guardada correctamente';
+    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
+  } catch (err) {
+    if (statusEl) statusEl.textContent = '❌ Error al procesar la imagen: ' + err.message;
+  }
+}
+
+
 function renderCarousel() {
   const track = el('crTrack');
   const dots  = el('crDots');
@@ -1348,9 +1705,16 @@ function renderCarousel() {
   prizes.forEach((p, i) => {
     const sideLabel = p.side === 'right' ? '➡️ Dos últimas cifras' : '⬅️ Dos primeras cifras';
     const img = p.img ? `<img src="${p.img}" alt="${p.name}" onerror="this.parentElement.innerHTML='<span class=\\'pe\\'>🏆</span>'">` : `<span class="pe">🏆</span>`;
-    track.innerHTML += `<div class="pr-slide"><div class="pr-ring" data-tilt data-tilt-max="20" data-tilt-speed="400" data-tilt-glare="true" data-tilt-max-glare="0.5">${img}</div><p class="pr-side">${sideLabel}</p><p class="pr-name">${p.name}</p>${p.desc?`<p class="pr-desc">${p.desc}</p>`:''} ${p.donor?`<p class="pr-donor">Donado por: ${p.donor}</p>`:''}</div>`;
+    track.innerHTML += `<div class="pr-slide"><div class="pr-ring" data-tilt data-tilt-max="25" data-tilt-speed="400" data-tilt-glare="true" data-tilt-max-glare="0.5">${img}</div><p class="pr-side">${sideLabel}</p><p class="pr-name" style="font-size: 1.25rem;">${p.name}</p>${p.desc?`<p class="pr-desc" style="font-size: 0.9rem; max-width: 320px;">${p.desc}</p>`:''} ${p.donor?`<p class="pr-donor" style="font-size: 1.15rem;">Donado por: ${p.donor}</p>`:''}</div>`;
     dots.innerHTML  += `<div class="cdot${i===0?' active':''}" onclick="goSlide(${i})"></div>`;
   });
+  
+  // Re-init VanillaTilt for dynamically added elements
+  setTimeout(() => {
+    if (window.VanillaTilt) {
+      VanillaTilt.init(document.querySelectorAll(".pr-ring[data-tilt]"));
+    }
+  }, 100);
 }
 
 function goSlide(i) {
@@ -1363,7 +1727,7 @@ function goSlide(i) {
 
 function startCarousel() {
   if (carouselTimer) clearInterval(carouselTimer);
-  carouselTimer = setInterval(()=>goSlide(carouselIdx+1), 4000);
+  carouselTimer = setInterval(()=>goSlide(carouselIdx+1), 7000);
 }
 
 /* ============================================
@@ -1429,12 +1793,13 @@ function dlBlob(blob, name) {
 function today() { return new Date().toLocaleDateString('es-ES').replace(/\//g,'_'); }
 
 /* Cerrar overlays al hacer clic fuera */
-['numOverlay','admOverlay','confirmOverlay'].forEach(id=>{
+['numOverlay','admOverlay','confirmOverlay','basketOverlay'].forEach(id=>{
   el(id).addEventListener('click',function(e){
     if(e.target===this){
       if(id==='numOverlay') closeNum();
       else if(id==='admOverlay') closeAdm();
       else if(id==='confirmOverlay') closeConfirm();
+      else if(id==='basketOverlay') closeBasket();
     }
   });
 });
