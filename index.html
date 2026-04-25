@@ -512,7 +512,6 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
     <p class="af-cau" id="fCau">Sorteo sin ánimo de lucro · Recaudación de fondos</p>
     <div class="af-links">
       <span class="af-link" onclick="openAdm()">🔐 Administrador</span>
-      <span class="af-link" onclick="openWizEdit()">⚙️ Editar configuración</span>
     </div>
   </footer>
 </div>
@@ -583,7 +582,8 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
     </div>
 
     <div id="aPanel" style="display:none;">
-      <h3 style="margin-bottom:12px;">⚙️ Panel de Administrador</h3>
+      <h3 style="margin-bottom:4px;">⚙️ Panel de Administrador</h3>
+      <button onclick="closeAdm();openWizEdit();" style="width:100%;padding:7px;margin-bottom:12px;border-radius:8px;border:1px dashed var(--border);background:var(--bg);color:var(--muted);font-size:0.8rem;cursor:pointer;">⚙️ Editar configuración del sorteo</button>
       <div class="a-tabs">
         <button class="atab active" onclick="aTab('grid')">Cuadrante</button>
         <button class="atab" onclick="aTab('parts')">Pagos</button>
