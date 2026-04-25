@@ -1015,9 +1015,10 @@ function applyConfig() {
   el('ht-pay').textContent = cfg.bizum
     ? `Haz un donativo solidario de 1€ por Bizum al ${cfg.bizum} — escribe en el CONCEPTO el número que has elegido`
     : 'Haz un donativo solidario de 1€ según las instrucciones que aparecen al reservar el número';
-  el('ht-contact').textContent = cfg.contact
-    ? `Manda el comprobante del donativo por WhatsApp o email a ${cfg.contact} y te confirmamos la reserva`
-    : 'Envíanos el comprobante del donativo por WhatsApp o email para confirmar tu número';
+  
+  const contactWA = cfg.contact || cfg.bizum || '742062655';
+  const contactEM = cfg.emailPub || 'espartovivo@gmail.com';
+  el('ht-contact').textContent = `Manda el comprobante por WhatsApp al ${contactWA} o por email a ${contactEM} — te confirmamos la reserva al momento`;
 
   // Selects de número (huérfano y efectivo) — se rellenan con números libres al abrir pagos
   populateNumSelects();
