@@ -822,7 +822,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
         style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-size:1rem;background:var(--bg);">
       <p style="font-size:0.72rem;color:var(--muted);margin-top:4px;">Debe ser un móvil español real (6xx / 7xx). Lo usamos para confirmar el pago contigo.</p>
     </div>
-    <button class="mbtn mb-green" id="bReserveBtn" style="width:100%;padding:14px;font-size:1rem;margin-top:10px;" onclick="reserveAll()">🎟️ Reservar todos los números</button>
+    <button class="mbtn mb-green" id="bReserveBtn" style="width:100%;padding:14px;font-size:1rem;margin-top:10px;" onclick="reserveAll()">🎟️ Reservar</button>
     <div class="send-proof" id="bProofBtns" style="display:none;margin-top:10px;">
       <button class="proof-btn proof-wa" onclick="sendBasketProofWA()">📲 Enviar comprobante por WhatsApp</button>
     </div>
@@ -1110,6 +1110,9 @@ function openBasketCheckout() {
 
   el('bPhone').value = '';
   el('bProofBtns').style.display = 'none';
+  const _n = nums.length;
+  const _btnTxt = `🎟️ Reservar ${_n} número${_n===1?'':'s'}`;
+  if (el('bReserveBtn')) el('bReserveBtn').textContent = _btnTxt;
   el('bReserveBtn').style.display = 'block';
   el('basketOverlay').classList.add('open');
 }
@@ -1162,7 +1165,7 @@ async function reserveAll() {
       if (g) { g.className = 'nb reserved'; g.classList.remove('selected'); g.onclick = null; }
     } catch(e) { failed.push(num); }
   }
-  if (btn) { btn.disabled = false; btn.textContent = '🎟️ Reservar todos los números'; }
+  if (btn) { btn.disabled = false; btn.textContent = `🎟️ Reservar ${[...selectedNums].sort().length} número${[...selectedNums].sort().length===1?'':'s'}`; }
 
   if (failed.length) toast(`⚠️ ${failed.length} ya ocupados: ${failed.join(', ')}`);
   if (okNums.length) {
