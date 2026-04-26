@@ -719,10 +719,14 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
       <!-- ONCE -->
       <div id="at-once" style="display:none;">
         <!-- Contador Bizum -->
-        <div style="background:var(--green-light);border:1px solid var(--green);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:0.82rem;">
+        <div style="background:var(--green-light);border:1px solid var(--green);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:0.82rem;">
           <strong>🔄 Contador Bizum:</strong> <span id="bizumCountDisp">—</span> pagos recibidos
           <span id="bizum2ActiveBadge" style="display:none;margin-left:8px;background:var(--gold);color:var(--text);border-radius:10px;padding:2px 8px;font-size:0.72rem;font-weight:700;">2º Bizum activo</span>
           <button onclick="resetBizumCount()" style="margin-left:8px;font-size:0.72rem;border:1px solid var(--muted);background:white;border-radius:6px;padding:2px 8px;cursor:pointer;">Resetear</button>
+        </div>
+        <!-- Aviso reservas pendientes -->
+        <div id="bizumPendingWarn" style="display:none;background:#fff8e7;border:1px solid var(--gold);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:0.78rem;color:var(--gold-dark,#7a5800);">
+          ⚠️ Hay <strong><span id="bizumPendingCount">0</span> reservas pendientes</strong> de confirmar pago. El contador puede estar <em>ligeramente inflado</em> si alguna caduca sin pago. Usa "Resetear" para ajustarlo manualmente si es necesario.
         </div>
         <p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;line-height:1.55;">Introduce el número del cupón de la ONCE del día del sorteo (5 dígitos). El sistema calculará los ganadores automáticamente.</p>
         <div class="mf-g"><label>Número ONCE (5 dígitos)</label><input id="onceIn" type="text" inputmode="numeric" maxlength="5" placeholder="Ej: 12345"></div>
@@ -1052,6 +1056,7 @@ function listenNumbers() {
     releaseExpired(data);
     renderGrid(data);
     updateCounters(data);
+    updateBizumPendingWarn(data);
     if (document.getElementById('aPanel').style.display !== 'none') renderAdminGrid(data);
   });
 }
@@ -1624,9 +1629,25 @@ function updateBizumCountDisplay(count) {
   }
 }
 
+function updateBizumPendingWarn(numbersData) {
+  const pending = Object.values(numbersData || {}).filter(v => v?.status === 'reserved').length;
+  const warn = el('bizumPendingWarn');
+  const countEl = el('bizumPendingCount');
+  if (!warn) return;
+  if (pending > 0) {
+    if (countEl) countEl.textContent = pending;
+    warn.style.display = 'block';
+  } else {
+    warn.style.display = 'none';
+  }
+}
+
 function resetGrid() {
-  if (!confirm('⚠️ ¿Seguro que quieres borrar TODOS los números del cuadrante? Esta acción no se puede deshacer.')) return;
-  db.ref('numbers').remove().then(() => toast('✅ Cuadrante limpiado. Todos los números están libres.'));
+  if (!confirm('⚠️ ¿Seguro que quieres borrar TODOS los números del cuadrante? Esta acción no se puede deshacer.\n\nTambién se reseteará el contador de Bizum a 0.')) return;
+  Promise.all([
+    db.ref('numbers').remove(),
+    db.ref('bizumCount').set(0)
+  ]).then(() => toast('✅ Cuadrante limpiado y contador Bizum reseteado a 0.'));
 }
 
 function exportData() {
@@ -1837,28 +1858,4 @@ function hideAll() {
 }
 function toast(msg, dur=2800) {
   const t=el('toast'); t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), dur);
-}
-function copyTxt(txt) { navigator.clipboard.writeText(txt).then(()=>toast('¡Copiado!')).catch(()=>{}); }
-function dlBlob(blob, name) {
-  const url=URL.createObjectURL(blob), a=Object.assign(document.createElement('a'),{href:url,download:name});
-  a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
-}
-function today() { return new Date().toLocaleDateString('es-ES').replace(/\//g,'_'); }
-
-/* Cerrar overlays al hacer clic fuera */
-['numOverlay','admOverlay','confirmOverlay','basketOverlay'].forEach(id=>{
-  el(id).addEventListener('click',function(e){
-    if(e.target===this){
-      if(id==='numOverlay') closeNum();
-      else if(id==='admOverlay') closeAdm();
-      else if(id==='confirmOverlay') closeConfirm();
-      else if(id==='basketOverlay') closeBasket();
-    }
-  });
-});
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
-<script>setTimeout(() => { if(window.VanillaTilt) VanillaTilt.init(document.querySelectorAll("[data-tilt]")); }, 1000);</script>
-</body>
-</html>
+  setTimeout(()=>t.classList.remove('sho
