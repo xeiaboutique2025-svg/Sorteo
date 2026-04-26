@@ -1870,4 +1870,155 @@ function shareWA() {
   if (isLocal) { toast('⚠️ WhatsApp compartirá sin enlace hasta que publiques en Netlify. El mensaje se abrirá igual.'); }
   open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
 }
-function shar
+function shareFB() {
+  if (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    toast('⚠️ Facebook solo funciona con la web publicada en internet. Despliega primero en Netlify.');
+    return;
+  }
+  open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(location.href)}`, '_blank');
+}
+function copyLink() {
+  if (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    toast('⚠️ Aún no tienes URL pública. Despliega en Netlify para obtenerla.');
+    return;
+  }
+  navigator.clipboard.writeText(location.href).then(()=>toast('🔗 ¡Enlace copiado!')).catch(()=>prompt('Copia este enlace:',location.href));
+}
+
+/* ============================================
+   UTILS
+   ============================================ */
+function el(id)  { return document.getElementById(id); }
+function v(id)   { return (el(id)?.value||'').trim(); }
+function showEl(id,d) { el(id).style.display=d; }
+function hideAll() {
+  ['fbSetup','wizard','app'].forEach(id=>el(id).style.display='none');
+}
+function toast(msg, dur=2800) {
+  const t=el('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), dur);
+}
+function copyTxt(txt) { navigator.clipboard.writeText(txt).then(()=>toast('¡Copiado!')).catch(()=>{}); }
+function dlBlob(blob, name) {
+  const url=URL.createObjectURL(blob), a=Object.assign(document.createElement('a'),{href:url,download:name});
+  a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function today() { return new Date().toLocaleDateString('es-ES').replace(/\//g,'_'); }
+
+/* Cerrar overlays al hacer clic fuera */
+['numOverlay','admOverlay','confirmOverlay','basketOverlay'].forEach(id=>{
+  el(id).addEventListener('click',function(e){
+    if(e.target===this){
+      if(id==='numOverlay') closeNum();
+      else if(id==='admOverlay') closeAdm();
+      else if(id==='confirmOverlay') closeConfirm();
+      else if(id==='basketOverlay') closeBasket();
+    }
+  });
+});
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+<script>setTimeout(() => { if(window.VanillaTilt) VanillaTilt.init(document.querySelectorAll("[data-tilt]")); }, 1000);</script>
+
+<!-- ══ LIGHTBOX CON ZOOM ══ -->
+<div id="imgLightbox">
+  <span id="lbClose" onclick="lbClose()">✕</span>
+  <img id="lbImg" src="" alt="Premio">
+  <div id="lbHint">📱 Pellizca para ampliar &nbsp;·&nbsp; 🖥️ Rueda del ratón para zoom &nbsp;·&nbsp; Toca fuera para cerrar</div>
+</div>
+<script>
+(function(){
+  const lb   = document.getElementById('imgLightbox');
+  const lbI  = document.getElementById('lbImg');
+  let scale = 1, minScale = 1, maxScale = 5;
+  let tx = 0, ty = 0;
+
+  window.lbOpen = function(src) {
+    lbI.src = src;
+    scale = 1; tx = 0; ty = 0;
+    applyTransform();
+    lb.classList.add('open');
+  };
+  window.lbClose = function() {
+    lb.classList.remove('open');
+    lbI.src = '';
+  };
+  lb.addEventListener('click', function(e){ if(e.target===lb) lbClose(); });
+
+  function applyTransform() {
+    lbI.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
+  }
+  function clampTranslation() {
+    if (scale <= 1) { tx = 0; ty = 0; }
+  }
+
+  /* Mouse wheel zoom */
+  lb.addEventListener('wheel', function(e){
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 1.15 : 0.87;
+    scale = Math.min(maxScale, Math.max(minScale, scale * delta));
+    clampTranslation();
+    applyTransform();
+  }, { passive: false });
+
+  /* Touch: pinch-to-zoom + pan */
+  let lastDist = null;
+  let panStartX = 0, panStartY = 0, panStartTx = 0, panStartTy = 0;
+  let isPinching = false;
+
+  lb.addEventListener('touchstart', function(e){
+    if (e.touches.length === 2) {
+      isPinching = true;
+      lastDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    } else if (e.touches.length === 1 && scale > 1) {
+      isPinching = false;
+      panStartX = e.touches[0].clientX;
+      panStartY = e.touches[0].clientY;
+      panStartTx = tx; panStartTy = ty;
+    }
+  }, { passive: true });
+
+  lb.addEventListener('touchmove', function(e){
+    e.preventDefault();
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      if (lastDist) {
+        scale = Math.min(maxScale, Math.max(minScale, scale * (dist / lastDist)));
+      }
+      lastDist = dist;
+      clampTranslation();
+      applyTransform();
+    } else if (e.touches.length === 1 && scale > 1 && !isPinching) {
+      tx = panStartTx + (e.touches[0].clientX - panStartX);
+      ty = panStartTy + (e.touches[0].clientY - panStartY);
+      applyTransform();
+    }
+  }, { passive: false });
+
+  lb.addEventListener('touchend', function(e){
+    if (e.touches.length < 2) { lastDist = null; isPinching = false; }
+    if (scale < 1.05) { scale = 1; tx = 0; ty = 0; applyTransform(); }
+  }, { passive: true });
+
+  /* Doble toque para zoom rápido */
+  let lastTap = 0;
+  lb.addEventListener('click', function(e){
+    if (e.target === lb) return;
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      scale = scale > 1.5 ? 1 : 2.5;
+      tx = 0; ty = 0;
+      applyTransform();
+    }
+    lastTap = now;
+  });
+})();
+</script>
+</body>
+</html>
