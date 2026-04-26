@@ -551,7 +551,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
     <h2>¿Cómo participar?</h2>
     <div class="steps">
       <div class="step"><div class="sn">1</div><div class="st"><h4>Toca los números que quieras</h4><p>Cada número verde vale <strong>1€</strong>. Toca uno o varios — se marcan en azul y se añaden a tu carrito automáticamente.</p></div></div>
-      <div class="step"><div class="sn">2</div><div class="st"><h4>Haz un único Bizum</h4><p id="ht-pay">Cuando tengas todos tus números, pulsa "🛒 Reservar" en la barra de abajo y haz <strong>un solo Bizum</strong> por el total (ej. 3 números = 3€).</p></div></div>
+      <div class="step"><div class="sn">2</div><div class="st"><h4>Haz tu donativo por Bizum</h4><p id="ht-pay">Cuando tengas todos tus números, pulsa "🛒 Reservar" y haz <strong>un solo Bizum</strong> por el total (ej. 2 números = 2€, 3 números = 3€).</p></div></div>
       <div class="step"><div class="sn">3</div><div class="st"><h4>Manda el comprobante</h4><p id="ht-contact">Envíanos la captura del Bizum por WhatsApp — te confirmamos todos los números de golpe.</p></div></div>
       <div class="step"><div class="sn">4</div><div class="st"><h4>¡Espera al sorteo!</h4><p>Cuando el cuadrante se llene usamos el número de la ONCE para elegir a los 2 ganadores. Más números = más posibilidades.</p></div></div>
     </div>
@@ -596,7 +596,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
     <p style="font-size:0.82rem;color:var(--muted);margin-bottom:6px;">¿Confirmas tu elección?</p>
     <div class="num-badge" id="cNum" style="margin:0 auto 14px;">00</div>
     <p style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:6px;">Número <span id="cNumText">00</span></p>
-    <p style="font-size:0.92rem;color:var(--muted);margin-bottom:20px;line-height:1.5;">Si confirmas, este número queda reservado para ti durante <strong>24&nbsp;horas</strong> mientras realizas el <strong>donativo solidario de 1€</strong> por Bizum.</p>
+    <p style="font-size:0.92rem;color:var(--muted);margin-bottom:20px;line-height:1.5;">Si confirmas, este número queda reservado para ti durante <strong>24&nbsp;horas</strong> mientras realizas el <strong>donativo solidario</strong> por Bizum.</p>
     <div style="display:flex;gap:10px;justify-content:center;">
       <button class="mbtn mb-grey" onclick="closeConfirm()" style="flex:1;max-width:150px;font-size:0.95rem;">✕ Cancelar</button>
       <button class="mbtn" id="btnConfirmReserve" onclick="confirmReserve()" style="flex:1;max-width:150px;font-size:0.95rem;background:var(--green);">✓ Confirmar</button>
@@ -1029,7 +1029,7 @@ function applyConfig() {
 
   // How-to text
   el('ht-pay').textContent = cfg.bizum
-    ? `Haz un donativo solidario de 1€ por Bizum al ${cfg.bizum} — escribe en el CONCEPTO el número que has elegido`
+    ? `Haz un donativo solidario por Bizum al ${cfg.bizum} (número personal) — escribe en el CONCEPTO tu número o números elegidos`
     : 'Haz un donativo solidario de 1€ según las instrucciones que aparecen al reservar el número';
   
   const contactWA = cfg.contact || cfg.bizum || '742062655';
