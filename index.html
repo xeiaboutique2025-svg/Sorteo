@@ -418,6 +418,16 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
       <h2>💳 Forma de pago</h2>
       <p class="wd">¿Cómo va a pagar la gente el 1€? Solo necesitas un número de Bizum. El Ko-fi es opcional como alternativa.</p>
       <div class="fg"><label>📱 Número de Bizum *</label><input id="w-bizum" type="tel" placeholder="Ej: 600 123 456"></div>
+      <div class="fg">
+        <label>📱 Segundo Bizum (opcional — rotación automática)</label>
+        <input id="w-bizum2" type="tel" placeholder="Ej: 611 234 567">
+        <p class="fh">Si introduces un segundo número, la app lo usará automáticamente cuando el primero acumule el número de Bizums que indiques abajo.</p>
+      </div>
+      <div class="fg">
+        <label>🔄 Cambiar al segundo Bizum cuando el primero reciba (nº de pagos)</label>
+        <input id="w-bizumSwitch" type="number" min="1" max="99" placeholder="Ej: 50" value="50">
+        <p class="fh">Ej: si pones 50, a partir del pago 51 la app mostrará el segundo Bizum. Ideal para repartir la recepción de pagos.</p>
+      </div>
       <div class="fg"><label>☕ Enlace Ko-fi (opcional)</label><input id="w-kofi" type="url" placeholder="https://ko-fi.com/tuasociacion"><p class="fh">Para quienes no tengan Bizum. Gratis en ko-fi.com.</p></div>
       <div class="fg"><label>📬 WhatsApp para recibir comprobantes *</label><input id="w-contact" type="text" placeholder="Ej: 600 123 456"><p class="fh">Los participantes podrán mandarte la captura del Bizum directamente por WhatsApp.</p></div>
       <div class="fg"><label>📧 Email para recibir comprobantes</label><input id="w-emailpub" type="email" placeholder="Ej: espartovivo@gmail.com"><p class="fh">Opcional pero recomendado. Los participantes podrán enviarte la captura también por email.</p></div>
@@ -708,6 +718,12 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 
       <!-- ONCE -->
       <div id="at-once" style="display:none;">
+        <!-- Contador Bizum -->
+        <div style="background:var(--green-light);border:1px solid var(--green);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:0.82rem;">
+          <strong>🔄 Contador Bizum:</strong> <span id="bizumCountDisp">—</span> pagos recibidos
+          <span id="bizum2ActiveBadge" style="display:none;margin-left:8px;background:var(--gold);color:var(--text);border-radius:10px;padding:2px 8px;font-size:0.72rem;font-weight:700;">2º Bizum activo</span>
+          <button onclick="resetBizumCount()" style="margin-left:8px;font-size:0.72rem;border:1px solid var(--muted);background:white;border-radius:6px;padding:2px 8px;cursor:pointer;">Resetear</button>
+        </div>
         <p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;line-height:1.55;">Introduce el número del cupón de la ONCE del día del sorteo (5 dígitos). El sistema calculará los ganadores automáticamente.</p>
         <div class="mf-g"><label>Número ONCE (5 dígitos)</label><input id="onceIn" type="text" inputmode="numeric" maxlength="5" placeholder="Ej: 12345"></div>
         <button class="mbtn mb-green" onclick="revealWinners()">🎊 Revelar ganadores</button>
@@ -815,13 +831,13 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
     <div id="bChips" style="margin-bottom:10px;line-height:2;"></div>
     <div id="bTotalLabel" style="font-size:1.4rem;font-weight:900;color:var(--green);text-align:center;margin-bottom:14px;"></div>
     <div class="instr" id="bInstr"></div>
-    <div class="warn-box">⏱️ Tienes <strong>24 horas</strong> para confirmar el pago. Si no, los números quedan libres de nuevo.</div>
-    <div style="margin-top:14px;margin-bottom:6px;">
-      <label style="font-size:0.9rem;font-weight:700;color:var(--text);display:block;margin-bottom:6px;">📱 Tu número de móvil (obligatorio para confirmar tu reserva):</label>
+    <div style="margin-top:14px;margin-bottom:10px;background:var(--green-light);border:1.5px solid var(--green);border-radius:10px;padding:12px 14px;">
+      <label style="font-size:0.97rem;font-weight:800;color:var(--green-dark);display:block;margin-bottom:6px;">📱 Tu número de móvil:</label>
       <input id="bPhone" type="tel" inputmode="numeric" placeholder="Ej: 600 123 456"
-        style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-size:1rem;background:var(--bg);">
-      <p style="font-size:0.72rem;color:var(--muted);margin-top:4px;">Debe ser un móvil español real (6xx / 7xx). Lo usamos para confirmar el pago contigo.</p>
+        style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--green);font-size:1rem;background:white;outline:none;">
+      <p style="font-size:0.78rem;color:var(--green-dark);margin-top:6px;font-weight:600;">⚠️ Obligatorio — lo usamos para confirmar tu reserva contigo. Móvil español (6xx / 7xx).</p>
     </div>
+    <div class="warn-box">⏱️ Tienes <strong>24 horas</strong> para confirmar el pago. Si no, los números quedan libres de nuevo.</div>
     <button class="mbtn mb-green" id="bReserveBtn" style="width:100%;padding:14px;font-size:1rem;margin-top:10px;" onclick="reserveAll()">🎟️ Reservar</button>
     <div class="send-proof" id="bProofBtns" style="display:none;margin-top:10px;">
       <button class="proof-btn proof-wa" onclick="sendBasketProofWA()">📲 Enviar comprobante por WhatsApp</button>
@@ -959,7 +975,7 @@ function finishWizard() {
       { name: v('p1n') || 'Premio 1', desc: v('p1d'), donor: v('p1do'), img: v('p1i'), side: 'right' },
       { name: v('p2n') || 'Premio 2', desc: v('p2d'), donor: v('p2do'), img: v('p2i'), side: 'left'  },
     ],
-    bizum: v('w-bizum'), kofi: v('w-kofi'), contact: v('w-contact'), emailPub: v('w-emailpub'),
+    bizum: v('w-bizum'), bizum2: v('w-bizum2'), bizumSwitch: parseInt(v('w-bizumSwitch'))||50, kofi: v('w-kofi'), contact: v('w-contact'), emailPub: v('w-emailpub'),
     waPhone: v('w-waphone'), waKey: v('w-wakey'),
     ejEmail: v('w-email'), ejKey: v('w-ejkey'), ejSvc: v('w-ejsvc'), ejTpl: v('w-ejtpl'),
   };
@@ -970,7 +986,7 @@ function openWizEdit() {
   // Pre-fill wizard
   const s = (id, val) => { if (el(id)) el(id).value = val || ''; };
   s('w-org',cfg.organizer); s('w-logo',cfg.logo); s('w-title',cfg.title);
-  s('w-cause',cfg.cause); s('w-bizum',cfg.bizum); s('w-kofi',cfg.kofi);
+  s('w-cause',cfg.cause); s('w-bizum',cfg.bizum); s('w-bizum2',cfg.bizum2||''); s('w-bizumSwitch',cfg.bizumSwitch||50); s('w-kofi',cfg.kofi);
   s('w-contact',cfg.contact); s('w-emailpub',cfg.emailPub); s('w-waphone',cfg.waPhone); s('w-wakey',cfg.waKey);
   s('w-email',cfg.ejEmail); s('w-ejkey',cfg.ejKey); s('w-ejsvc',cfg.ejSvc); s('w-ejtpl',cfg.ejTpl);
   if (cfg.prizes) {
@@ -1028,6 +1044,8 @@ function applyConfig() {
    FIREBASE REAL-TIME LISTENER
    ============================================ */
 function listenNumbers() {
+  // Escuchar contador Bizum en tiempo real
+  db.ref('bizumCount').on('value', snap => { updateBizumCountDisplay(snap.val() || 0); });
   db.ref('numbers').on('value', snap => {
     const data = snap.val() || {};
     // Auto-release expired reservations
@@ -1086,7 +1104,23 @@ function clearBasket() {
   updateBasketBar();
 }
 
-function openBasketCheckout() {
+/* Devuelve el Bizum activo según el contador de pagos en Firebase */
+async function getActiveBizum() {
+  if (!cfg.bizum2) return cfg.bizum || ''; // sin segundo, usar siempre el primero
+  try {
+    const snap = await db.ref('bizumCount').get();
+    const count = snap.val() || 0;
+    const threshold = cfg.bizumSwitch || 50;
+    return count >= threshold ? (cfg.bizum2 || cfg.bizum || '') : (cfg.bizum || '');
+  } catch { return cfg.bizum || ''; }
+}
+
+/* Incrementa el contador de Bizum en Firebase tras reserva exitosa */
+function incrementBizumCount(n) {
+  db.ref('bizumCount').transaction(cur => (cur || 0) + n);
+}
+
+async function openBasketCheckout() {
   if (selectedNums.size === 0) return;
   const nums  = [...selectedNums].sort();
   const total = nums.length;
@@ -1094,12 +1128,12 @@ function openBasketCheckout() {
   el('bChips').innerHTML      = nums.map(n => `<span class="sel-chip">${n}</span>`).join('');
   el('bTotalLabel').textContent = `Total: ${total}€`;
 
-  const bizum = cfg.bizum || '';
+  const bizum = await getActiveBizum();
   const kofi  = cfg.kofi  || '';
   const concept = `Sorteo - Números: ${nums.join(', ')}`;
   let instrHtml = '';
   if (bizum) {
-    instrHtml += `<span class="big">Bizum de <strong>${total}€</strong> al <strong>${bizum}</strong></span>`;
+    instrHtml += `<span class="big">Bizum de <strong>${total}€</strong> al <strong>${bizum}</strong> <span style="font-size:0.75rem;font-weight:600;color:var(--muted);">(número personal)</span></span>`;
     instrHtml += `Concepto: <strong>${concept}</strong> <button class="copy-chip" onclick="copyTxt('${concept}')">Copiar</button>`;
   }
   if (kofi) {
@@ -1176,6 +1210,7 @@ async function reserveAll() {
     const newCount = (rlNow.ts > dayAgo ? (rlNow.count || 0) : 0) + okNums.length;
     localStorage.setItem(RL_KEY, JSON.stringify({ count: newCount, ts: Date.now() }));
     lastReservedNums = [...okNums]; // save before clearing
+    incrementBizumCount(okNums.length); // contador rotación Bizum
     clearBasket();
     el('bReserveBtn').style.display = 'none';
     el('bProofBtns').style.display  = 'grid';
@@ -1572,6 +1607,21 @@ function assignOrphan() {
     populateNumSelects();
     renderParticipants();
   });
+}
+
+function resetBizumCount() {
+  if (!confirm('¿Resetear el contador de Bizum a 0? Esto volverá a usar el primer número.')) return;
+  db.ref('bizumCount').set(0).then(() => toast('✅ Contador Bizum reseteado a 0'));
+}
+
+function updateBizumCountDisplay(count) {
+  const disp = el('bizumCountDisp');
+  if (disp) disp.textContent = count;
+  const badge = el('bizum2ActiveBadge');
+  if (badge) {
+    const threshold = cfg.bizumSwitch || 50;
+    badge.style.display = (cfg.bizum2 && count >= threshold) ? 'inline' : 'none';
+  }
 }
 
 function resetGrid() {
